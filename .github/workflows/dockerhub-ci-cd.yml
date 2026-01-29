@@ -86,7 +86,7 @@ jobs:
             --capabilities CAPABILITY_NAMED_IAM \
             --parameter-overrides \
               VpcId=vpc-07cf0bd2defe827ee \
-              Subnets=subnet-002e4892bb31ff833 \
+              Subnets=subnet-002e4892bb31ff833,subnet-019e055615dc1a073 \
               ImageTag=${{ needs.build.outputs.image_tag }} \
               AWSAccountId=${{ env.AWS_ACCOUNT_ID }} \
               AWSRegion=${{ env.AWS_REGION }}

@@ -6,6 +6,8 @@ Parameters:
     Type: AWS::EC2::VPC::Id
   Subnets:
     Type: List<AWS::EC2::Subnet::Id>
+    Description: Provide TWO subnets (different AZs) for ALB
+
   ImageTag:
     Type: String
   AWSAccountId:
@@ -25,7 +27,7 @@ Resources:
   ECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: ECS SG
+      GroupDescription: ECS + ALB + EFS SG
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -49,7 +51,8 @@ Resources:
     Properties:
       FileSystemId: !Ref FileSystem
       SubnetId: !Select [0, !Ref Subnets]
-      SecurityGroups: [!Ref ECSSecurityGroup]
+      SecurityGroups:
+        - !Ref ECSSecurityGroup
 
   # ---------- ALB ----------
   LoadBalancer:
@@ -57,7 +60,8 @@ Resources:
     Properties:
       Scheme: internet-facing
       Subnets: !Ref Subnets
-      SecurityGroups: [!Ref ECSSecurityGroup]
+      SecurityGroups:
+        - !Ref ECSSecurityGroup
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -85,8 +89,9 @@ Resources:
       Cpu: "512"
       Memory: "1024"
       NetworkMode: awsvpc
-      RequiresCompatibilities: [FARGATE]
-      ExecutionRoleArn: !Sub "arn:aws:iam::${AWSAccountId}:role/ecsTaskExecutionRole"
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Sub arn:aws:iam::${AWSAccountId}:role/ecsTaskExecutionRole
 
       Volumes:
         - Name: efs-volume
@@ -95,18 +100,17 @@ Resources:
 
       ContainerDefinitions:
 
-        # ---------- NGINX ---------- 
+        # ---------- NGINX ----------
         - Name: nginx
-          Image: !Sub "${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-nginx:${ImageTag}"
+          Image: !Sub ${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-nginx:${ImageTag}
           Essential: true
           PortMappings:
             - ContainerPort: 80
 
-        # ---------- AUTH ---------- 
+        # ---------- AUTH ----------
         - Name: auth
-          Image: !Sub "${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-auth:${ImageTag}"
+          Image: !Sub ${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-auth:${ImageTag}
           Essential: true
-
           PortMappings:
             - ContainerPort: 8000
             - ContainerPort: 50051
@@ -122,9 +126,9 @@ Resources:
               Value: "50051"
 
           Secrets:
-            - Name : AUTH_DB_PATH
+            - Name: AUTH_DB_PATH
               ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/auth/AUTH_DB_PATH
-            - Name : AWS_REGION
+            - Name: AWS_REGION
               ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_REGION
             - Name: AWS_ACCESS_KEY_ID
               ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_ACCESS_KEY_ID
@@ -137,14 +141,13 @@ Resources:
             - Name: COGNITO_SYSTEM_PASSWORD
               ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_SYSTEM_PASSWORD
 
-
           MountPoints:
             - SourceVolume: efs-volume
               ContainerPath: /app/data
 
-        # ---------- CUSTOMER ---------- 
+        # ---------- CUSTOMER ----------
         - Name: customer
-          Image: !Sub "${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-customer:${ImageTag}"
+          Image: !Sub ${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-customer:${ImageTag}
           Essential: true
 
           Environment:
@@ -158,9 +161,9 @@ Resources:
               Value: "50051"
 
           Secrets:
-            - Name : CUSTOMER_DB_PATH
+            - Name: CUSTOMER_DB_PATH
               ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/customer/CUSTOMER_DB_PATH
-            - Name : AWS_REGION
+            - Name: AWS_REGION
               ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_REGION
             - Name: AWS_ACCESS_KEY_ID
               ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_ACCESS_KEY_ID
@@ -189,8 +192,10 @@ Resources:
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
-          Subnets: !Ref Subnets
-          SecurityGroups: [!Ref ECSSecurityGroup]
+          Subnets:
+            - !Select [0, !Ref Subnets]   # ✅ ECS uses ONE subnet only
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
       LoadBalancers:
         - ContainerName: nginx
           ContainerPort: 80
