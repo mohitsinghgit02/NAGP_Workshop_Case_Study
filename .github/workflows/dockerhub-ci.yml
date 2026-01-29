@@ -35,5 +35,8 @@ jobs:
 
       - name: Build & Push Customer image
         run: |
-          docker build -t $DOCKERHUB_USERNAME/amcart-customer:$TAG ./app/customer
+          docker build \
+            -f ./app/customer/Dockerfile.api \
+            -t $DOCKERHUB_USERNAME/amcart-customer:$TAG \
+            ./app/customer
           docker push $DOCKERHUB_USERNAME/amcart-customer:$TAG
