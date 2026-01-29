@@ -3,7 +3,7 @@ name: Build & Push Docker Images
 on:
   push:
     branches:
-       - "**"
+      - "**"
 
 env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -40,3 +40,8 @@ jobs:
             -t $DOCKERHUB_USERNAME/amcart-customer:$TAG \
             ./app/customer
           docker push $DOCKERHUB_USERNAME/amcart-customer:$TAG
+      
+      - name: Build & Push Nginx image
+        run: |
+          docker build -t $DOCKERHUB_USERNAME/amcart-nginx:$TAG ./app/nginx
+          docker push $DOCKERHUB_USERNAME/amcart-nginx:$TAG
