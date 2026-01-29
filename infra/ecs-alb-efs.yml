@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Low-cost ECS + ALB + EFS setup with env via SSM
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  Subnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  ImageTag:
+    Type: String
+
+Resources:
+
+  # ---------- ECS CLUSTER ----------
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: amcart-cluster
+
+  # ---------- SECURITY GROUP ----------
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS SG
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          CidrIp: 0.0.0.0/0
+
+  # ---------- EFS ----------
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: false
+      PerformanceMode: generalPurpose
+
+  EFSMountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystem
+      SubnetId: !Select [0, !Ref Subnets]
+      SecurityGroups: [!Ref ECSSecurityGroup]
+
+  # ---------- ALB ----------
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      Subnets: !Ref Subnets
+      SecurityGroups: [!Ref ECSSecurityGroup]
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      VpcId: !Ref VpcId
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ---------- TASK DEFINITION ----------
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: amcart-task
+      Cpu: "512"
+      Memory: "1024"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: arn:aws:iam::483620274852:role/ecsTaskExecutionRole
+
+      Volumes:
+        - Name: efs-volume
+          EFSVolumeConfiguration:
+            FileSystemId: !Ref FileSystem
+
+      ContainerDefinitions:
+
+        # ---------- NGINX ----------
+        - Name: nginx
+          Image: !Sub "mohitsinghhub/amcart-nginx:${ImageTag}"
+          Essential: true
+          PortMappings:
+            - ContainerPort: 80
+
+        # ---------- AUTH ----------
+        - Name: auth
+          Image: !Sub "mohitsinghhub/amcart-auth:${ImageTag}"
+          Essential: true
+
+          PortMappings:
+            - ContainerPort: 8000
+            - ContainerPort: 50051
+
+          Environment:
+            - Name: APP_ENV
+              Value: dev
+            - Name: SERVICE_NAME
+              Value: auth
+            - Name: AUTH_HTTP_PORT
+              Value: "8000"
+            - Name: AUTH_GRPC_PORT
+              Value: "50051"
+
+          Secrets:
+            - Name : AUTH_DB_PATH
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/auth/AUTH_DB_PATH
+            - Name : AWS_REGION
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_REGION
+            - Name: AWS_ACCESS_KEY_ID
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_ACCESS_KEY_ID
+            - Name: AWS_SECRET_ACCESS_KEY
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_SECRET_ACCESS_KEY
+            - Name: COGNITO_POOL_ID
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_POOL_ID
+            - Name: COGNITO_CLIENT_ID
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_CLIENT_ID
+            - Name: COGNITO_SYSTEM_PASSWORD
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_SYSTEM_PASSWORD
+
+
+          MountPoints:
+            - SourceVolume: efs-volume
+              ContainerPath: /app/data
+
+        # ---------- CUSTOMER ----------
+        - Name: customer
+          Image: !Sub "mohitsinghhub/amcart-customer:${ImageTag}"
+          Essential: true
+
+          Environment:
+            - Name: APP_ENV
+              Value: dev
+            - Name: SERVICE_NAME
+              Value: customer
+            - Name: AUTH_GRPC_HOST
+              Value: localhost
+            - Name: AUTH_GRPC_PORT
+              Value: "50051"
+
+          Secrets:
+            - Name : CUSTOMER_DB_PATH
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/customer/CUSTOMER_DB_PATH
+            - Name : AWS_REGION
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_REGION
+            - Name: AWS_ACCESS_KEY_ID
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_ACCESS_KEY_ID
+            - Name: AWS_SECRET_ACCESS_KEY
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_SECRET_ACCESS_KEY
+            - Name: COGNITO_POOL_ID
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_POOL_ID
+            - Name: COGNITO_CLIENT_ID
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_CLIENT_ID
+            - Name: COGNITO_SYSTEM_PASSWORD
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_SYSTEM_PASSWORD
+
+          MountPoints:
+            - SourceVolume: efs-volume
+              ContainerPath: /app/data
+
+  # ---------- ECS SERVICE ----------
+  ECSService:
+    Type: AWS::ECS::Service
+    DependsOn: Listener
+    Properties:
+      Cluster: !Ref ECSCluster
+      DesiredCount: 1
+      LaunchType: FARGATE
+      TaskDefinition: !Ref TaskDefinition
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets: !Ref Subnets
+          SecurityGroups: [!Ref ECSSecurityGroup]
+      LoadBalancers:
+        - ContainerName: nginx
+          ContainerPort: 80
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+  LoadBalancerDNS:
+    Value: !GetAtt LoadBalancer.DNSName

@@ -4,12 +4,14 @@ from grpc_client import (
     user_profile_pb2,
     user_profile_pb2_grpc,
 )  # your copied proto files
+import os
 
 
 class CustomerService:
     def __init__(self):
         # If needed, you can also read host/port from env vars
-        self.grpc_host = "auth:50051"  # Kubernetes service + port
+        self.grpc_host = f"{os.getenv('AUTH_GRPC_HOST')}:{os.getenv('AUTH_GRPC_PORT')}"
+        # auth:50051  # Kubernetes service + port
         self.channel = grpc.insecure_channel(self.grpc_host)
         self.stub = user_profile_pb2_grpc.UserProfileServiceStub(self.channel)
 

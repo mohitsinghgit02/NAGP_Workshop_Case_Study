@@ -2,10 +2,11 @@ import sqlite3
 from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+import os
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-DB_PATH = DATA_DIR / "customer.db"
+
+DB_PATH = os.getenv("CUSTOMER_DB_PATH")
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
@@ -14,7 +15,7 @@ DATABASE_URL = f"sqlite:///{DB_PATH}"
 # Existing RAW connection (UNCHANGED)
 # -------------------------
 def get_db_connection():
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    # DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
