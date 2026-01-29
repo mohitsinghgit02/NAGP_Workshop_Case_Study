@@ -6,7 +6,8 @@ on:
       - "**"
 
 env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
 jobs:
 # ---------------- BUILD ----------------
@@ -19,6 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Generate unique image tag
       - name: Generate image tag
         id: vars
         run: |
@@ -27,67 +29,44 @@ jobs:
           TAG="${BRANCH}-${TS}"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      # - name: Login to Docker Hub
-      #   uses: docker/login-action@v3
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
-
+      # Configure AWS credentials for ECR
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
+      # Login to Amazon ECR
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      # Build & push Auth image
       - name: Build & Push Auth image
         run: |
-          docker build -t amcart-auth:$TAG ./app/auth
-          docker tag amcart-auth:$TAG ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/amcart-auth:$TAG
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/amcart-auth:$TAG
+          docker build -t amcart-auth:${{ steps.vars.outputs.tag }} ./app/auth
+          docker tag amcart-auth:${{ steps.vars.outputs.tag }} ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-auth:${{ steps.vars.outputs.tag }}
+          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-auth:${{ steps.vars.outputs.tag }}
 
+      # Build & push Customer image
       - name: Build & Push Customer image
         run: |
-          docker build -f ./app/customer/Dockerfile.api -t amcart-customer:$TAG ./app/customer
-          docker tag amcart-customer:$TAG ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/amcart-customer:$TAG
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/amcart-customer:$TAG
+          docker build -f ./app/customer/Dockerfile.api -t amcart-customer:${{ steps.vars.outputs.tag }} ./app/customer
+          docker tag amcart-customer:${{ steps.vars.outputs.tag }} ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-customer:${{ steps.vars.outputs.tag }}
+          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-customer:${{ steps.vars.outputs.tag }}
 
+      # Build & push Nginx image
       - name: Build & Push Nginx image
         run: |
-          docker build -t amcart-nginx:$TAG ./app/nginx
-          docker tag amcart-nginx:$TAG ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/amcart-nginx:$TAG
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/amcart-nginx:$TAG
-
-
-      # - name: Build & Push Auth
-      #   run: |
-      #     docker build -t $DOCKERHUB_USERNAME/amcart-auth:${{ steps.vars.outputs.tag }} ./app/auth
-      #     docker push $DOCKERHUB_USERNAME/amcart-auth:${{ steps.vars.outputs.tag }}
-
-      # - name: Build & Push Customer
-      #   run: |
-      #     docker build -f ./app/customer/Dockerfile.api \
-      #       -t $DOCKERHUB_USERNAME/amcart-customer:${{ steps.vars.outputs.tag }} \
-      #       ./app/customer
-      #     docker push $DOCKERHUB_USERNAME/amcart-customer:${{ steps.vars.outputs.tag }}
-
-      # - name: Build & Push Nginx
-      #   run: |
-      #     docker build -t $DOCKERHUB_USERNAME/amcart-nginx:${{ steps.vars.outputs.tag }} ./app/nginx
-      #     docker push $DOCKERHUB_USERNAME/amcart-nginx:${{ steps.vars.outputs.tag }}
+          docker build -t amcart-nginx:${{ steps.vars.outputs.tag }} ./app/nginx
+          docker tag amcart-nginx:${{ steps.vars.outputs.tag }} ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-nginx:${{ steps.vars.outputs.tag }}
+          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-nginx:${{ steps.vars.outputs.tag }}
 
 # ---------------- DEPLOY ----------------
   deploy:
     needs: build
     runs-on: ubuntu-latest
-
-    if: always()
-    # if: |
-    #   github.ref_name == 'main' ||
-    #   startsWith(github.ref_name, 'release/')
+    if: always()  # or restrict to main/release branches if you want
 
     steps:
       - uses: actions/checkout@v4
@@ -97,9 +76,9 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy ECS
+      - name: Deploy ECS via CloudFormation
         run: |
           aws cloudformation deploy \
             --stack-name amcart-stack \
@@ -108,6 +87,6 @@ jobs:
             --parameter-overrides \
               VpcId=vpc-07cf0bd2defe827ee \
               Subnets=subnet-002e4892bb31ff833,subnet-019e055615dc1a073 \
-              ImageTag=${{ needs.build.outputs.image_tag }}
-              AWSAccountId=${{ secrets.AWS_ACCOUNT_ID }}
-              AWSRegion=${{ secrets.AWS_REGION }}
+              ImageTag=${{ needs.build.outputs.image_tag }} \
+              AWSAccountId=${{ env.AWS_ACCOUNT_ID }} \
+              AWSRegion=${{ env.AWS_REGION }}
