@@ -15,20 +15,6 @@ services:
       - .env
     networks:
       - app-net
-  
-  # auth-grpc:
-  #   build: 
-  #     context: ./app/auth
-  #     dockerfile: Dockerfile.grpc
-  #   container_name: auth-grpc-service
-  #   ports:
-  #     - "50051:50051"
-  #   volumes:
-  #     - ./app/auth/data:/app/data
-  #   env_file:
-  #     - .env
-  #   networks:
-  #     - app-net
 
   customer:
     build: 

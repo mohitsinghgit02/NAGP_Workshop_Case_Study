@@ -1,0 +1,39 @@
+name: Build & Push Docker Images
+
+on:
+  push:
+    branches:
+       - "**"
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set image tag from branch
+        id: vars
+        run: |
+          BRANCH=$(echo "${GITHUB_REF_NAME}" | tr '/' '-')
+          echo "TAG=$BRANCH" >> $GITHUB_ENV
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push Auth image
+        run: |
+          docker build -t $DOCKERHUB_USERNAME/amcart-auth:$TAG ./app/auth
+          docker push $DOCKERHUB_USERNAME/amcart-auth:$TAG
+
+      - name: Build & Push Customer image
+        run: |
+          docker build -t $DOCKERHUB_USERNAME/amcart-customer:$TAG ./app/customer
+          docker push $DOCKERHUB_USERNAME/amcart-customer:$TAG
