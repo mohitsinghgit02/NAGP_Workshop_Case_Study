@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package auth;
+
+service UserProfileService {
+  rpc GetUserProfile (UserProfileRequest) returns (UserProfileResponse);
+}
+
+message UserProfileRequest {
+  string access_token = 1;
+  string id_token = 2;
+}
+
+message Permission {
+  int32 permission_id = 1;
+  string permission_name = 2;
+}
+
+message Role {
+  int32 role_id = 1;
+  string role_name = 2;
+  repeated Permission permissions = 3;
+}
+
+message User {
+  string user_id = 1;
+  string email = 2;
+  string phone = 3;
+  string status = 4;
+}
+
+message UserProfileResponse {
+  bool success = 1;
+  User user = 2;
+  repeated Role roles = 3;
+  string message = 4;
+}

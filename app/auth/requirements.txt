@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+requests
+sqlalchemy
+boto3
+grpcio==1.62.1
+grpcio-tools==1.62.1
+python-jose[cryptography]
+requests
+grpcio-reflection

@@ -1,0 +1,65 @@
+import sqlite3
+from pathlib import Path
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+DB_PATH = DATA_DIR / "customer.db"
+
+DATABASE_URL = f"sqlite:///{DB_PATH}"
+
+
+# -------------------------
+# Existing RAW connection (UNCHANGED)
+# -------------------------
+def get_db_connection():
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS CUSTOMER_DB_CUSTOMER (
+            customer_id TEXT PRIMARY KEY,
+            user_id TEXT,
+            first_name TEXT,
+            last_name TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS CUSTOMER_DB_ADDRESS (
+            address_id TEXT PRIMARY KEY,
+            customer_id TEXT NOT NULL,
+            line1 TEXT,
+            line2 TEXT,
+            city TEXT,
+            state TEXT,
+            country TEXT,
+            postal_code TEXT,
+            FOREIGN KEY(customer_id) REFERENCES CUSTOMER_DB_CUSTOMER(customer_id)
+        );
+        """
+    )
+
+    return conn
+
+
+# -------------------------
+# SQLAlchemy ORM setup (NEW)
+# -------------------------
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
