@@ -8,6 +8,10 @@ Parameters:
     Type: List<AWS::EC2::Subnet::Id>
   ImageTag:
     Type: String
+  AWSAccountId:
+    Type: String
+  AWSRegion:
+    Type: String
 
 Resources:
 
@@ -82,7 +86,7 @@ Resources:
       Memory: "1024"
       NetworkMode: awsvpc
       RequiresCompatibilities: [FARGATE]
-      ExecutionRoleArn: arn:aws:iam::483620274852:role/ecsTaskExecutionRole
+      ExecutionRoleArn: !Sub "arn:aws:iam::${AWSAccountId}:role/ecsTaskExecutionRole"
 
       Volumes:
         - Name: efs-volume
@@ -91,16 +95,16 @@ Resources:
 
       ContainerDefinitions:
 
-        # ---------- NGINX ----------
+        # ---------- NGINX ---------- 
         - Name: nginx
-          Image: !Sub "mohitsinghhub/amcart-nginx:${ImageTag}"
+          Image: !Sub "${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-nginx:${ImageTag}"
           Essential: true
           PortMappings:
             - ContainerPort: 80
 
-        # ---------- AUTH ----------
+        # ---------- AUTH ---------- 
         - Name: auth
-          Image: !Sub "mohitsinghhub/amcart-auth:${ImageTag}"
+          Image: !Sub "${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-auth:${ImageTag}"
           Essential: true
 
           PortMappings:
@@ -138,9 +142,9 @@ Resources:
             - SourceVolume: efs-volume
               ContainerPath: /app/data
 
-        # ---------- CUSTOMER ----------
+        # ---------- CUSTOMER ---------- 
         - Name: customer
-          Image: !Sub "mohitsinghhub/amcart-customer:${ImageTag}"
+          Image: !Sub "${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-customer:${ImageTag}"
           Essential: true
 
           Environment:
