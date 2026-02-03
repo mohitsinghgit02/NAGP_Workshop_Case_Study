@@ -129,7 +129,7 @@ Resources:
           Image: !Sub ${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-auth:${ImageTag}
           Essential: true
           PortMappings:
-            - ContainerPort: 8000
+            - ContainerPort: 8001
             - ContainerPort: 50051
           LogConfiguration:
             LogDriver: awslogs
