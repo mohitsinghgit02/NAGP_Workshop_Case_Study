@@ -80,6 +80,10 @@ Resources:
       Protocol: HTTP
       TargetType: ip
       VpcId: !Ref VpcId
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 30
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
 
   Listener:
     Type: AWS::ElasticLoadBalancingV2::Listener
