@@ -18,7 +18,10 @@ class AuthController:
     @post("/send-otp")
     def send_otp(self, request: SendOTPRequest, db: Session = Depends(get_db)):
         otp = self.otp_service.send_otp(db, request.identifier)
-        return {"success": True, "message": f"OTP sent successfully {otp}"}
+        return {
+            "success": True,
+            "message": f"OTP sent successfully with updated code {otp}",
+        }
 
     @post("/verify-otp")
     def verify_otp(self, request: VerifyOTPRequest, db: Session = Depends(get_db)):

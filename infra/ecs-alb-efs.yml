@@ -189,7 +189,7 @@ Resources:
             - Name: SERVICE_NAME
               Value: customer
             - Name: AUTH_GRPC_HOST
-              Value: auth
+              Value: localhost
             - Name: AUTH_GRPC_PORT
               Value: "50051"
 
