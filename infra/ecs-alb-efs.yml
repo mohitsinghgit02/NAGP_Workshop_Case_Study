@@ -114,6 +114,12 @@ Resources:
           PortMappings:
             - ContainerPort: 8000
             - ContainerPort: 50051
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/amcart
+              awslogs-region: !Ref AWSRegion
+              awslogs-stream-prefix: auth
 
           Environment:
             - Name: APP_ENV
