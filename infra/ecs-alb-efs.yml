@@ -1,21 +1,31 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Low-cost ECS + ALB + EFS setup with env via SSM
+Description: Low-cost ECS + ALB + EFS setup with CloudWatch logging
 
 Parameters:
   VpcId:
     Type: AWS::EC2::VPC::Id
+
   Subnets:
     Type: List<AWS::EC2::Subnet::Id>
     Description: Provide TWO subnets (different AZs) for ALB
 
   ImageTag:
     Type: String
+
   AWSAccountId:
     Type: String
+
   AWSRegion:
     Type: String
 
 Resources:
+
+  # ---------- CLOUDWATCH LOG GROUP ----------
+  AmcartLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/amcart
+      RetentionInDays: 14
 
   # ---------- ECS CLUSTER ----------
   ECSCluster:
@@ -84,6 +94,7 @@ Resources:
   # ---------- TASK DEFINITION ----------
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
+    DependsOn: AmcartLogGroup
     Properties:
       Family: amcart-task
       Cpu: "512"
@@ -106,6 +117,12 @@ Resources:
           Essential: true
           PortMappings:
             - ContainerPort: 80
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/amcart
+              awslogs-region: !Ref AWSRegion
+              awslogs-stream-prefix: nginx
 
         # ---------- AUTH ----------
         - Name: auth
@@ -155,6 +172,12 @@ Resources:
         - Name: customer
           Image: !Sub ${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-customer:${ImageTag}
           Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/amcart
+              awslogs-region: !Ref AWSRegion
+              awslogs-stream-prefix: customer
 
           Environment:
             - Name: APP_ENV
@@ -199,7 +222,7 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           Subnets:
-            - !Select [0, !Ref Subnets]   # ✅ ECS uses ONE subnet only
+            - !Select [0, !Ref Subnets]
           SecurityGroups:
             - !Ref ECSSecurityGroup
       LoadBalancers:
