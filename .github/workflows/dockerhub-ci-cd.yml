@@ -90,3 +90,14 @@ jobs:
               ImageTag=${{ needs.build.outputs.image_tag }} \
               AWSAccountId=${{ env.AWS_ACCOUNT_ID }} \
               AWSRegion=${{ env.AWS_REGION }}
+              
+      - name: Get ALB DNS from CloudFormation
+        id: alb
+        run: |
+          ALB_DNS=$(aws cloudformation describe-stacks \
+            --stack-name amcart-stack \
+            --query "Stacks[0].Outputs[?OutputKey=='LoadBalancerDNS'].OutputValue" \
+            --output text)
+
+          echo "ALB_DNS=$ALB_DNS"
+          echo "alb_dns=$ALB_DNS" >> $GITHUB_OUTPUT
