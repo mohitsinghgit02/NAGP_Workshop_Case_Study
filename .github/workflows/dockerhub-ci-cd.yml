@@ -130,7 +130,7 @@ jobs:
       - name: Build frontend
         working-directory: front
         env:
-          VITE_API_BASE_URL: https://${{ steps.alb.outputs.alb_dns }}
+          VITE_API_BASE_URL: http://${{ steps.alb.outputs.alb_dns }}
         run: |
           npm ci
           npm run build
