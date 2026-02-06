@@ -109,7 +109,8 @@ jobs:
             --stack-name amcart-frontend \
             --template-file infra/frontend-s3-cloudfront.yml \
             --capabilities CAPABILITY_NAMED_IAM \
-            --parameter-overrides ProjectName=amcart
+            --parameter-overrides ProjectName=amcart \
+              ALBDomainName=${{ steps.alb.outputs.alb_dns }}
 
       - name: Get Frontend Infra Outputs
         id: frontend
@@ -130,7 +131,7 @@ jobs:
       - name: Build frontend
         working-directory: front
         env:
-          VITE_API_BASE_URL: http://${{ steps.alb.outputs.alb_dns }}
+          VITE_API_BASE_URL: /api
         run: |
           npm ci
           npm run build

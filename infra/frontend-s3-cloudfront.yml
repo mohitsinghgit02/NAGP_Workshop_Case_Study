@@ -1,13 +1,21 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Frontend hosting using S3 + CloudFront
+Description: Frontend hosting using S3 + CloudFront with API routed to ALB
 
 Parameters:
   ProjectName:
     Type: String
     Default: amcart
 
+  ALBDomainName:
+    Type: String
+    Description: ALB DNS name (without http://)
+    Example: amcart-loadb-xxxx.ap-south-1.elb.amazonaws.com
+
 Resources:
 
+  # ============================
+  # S3 BUCKET (FRONTEND)
+  # ============================
   FrontendBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
@@ -20,12 +28,18 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
+  # ============================
+  # CLOUDFRONT OAI
+  # ============================
   CloudFrontOAI:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
       CloudFrontOriginAccessIdentityConfig:
         Comment: !Sub "${ProjectName} OAI"
 
+  # ============================
+  # S3 BUCKET POLICY
+  # ============================
   FrontendBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -39,6 +53,9 @@ Resources:
             Action: s3:GetObject
             Resource: !Sub "${FrontendBucket.Arn}/*"
 
+  # ============================
+  # CLOUDFRONT DISTRIBUTION
+  # ============================
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -48,19 +65,62 @@ Resources:
         PriceClass: PriceClass_100
 
         Origins:
+          # -------- S3 ORIGIN --------
           - Id: S3Origin
             DomainName: !GetAtt FrontendBucket.RegionalDomainName
             S3OriginConfig:
               OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
 
+          # -------- ALB ORIGIN --------
+          - Id: ALBOrigin
+            DomainName: !Ref ALBDomainName
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: http-only
+              OriginSSLProtocols:
+                - TLSv1.2
+
+        # ============================
+        # DEFAULT BEHAVIOR (FRONTEND)
+        # ============================
         DefaultCacheBehavior:
           TargetOriginId: S3Origin
           ViewerProtocolPolicy: redirect-to-https
-          AllowedMethods: [GET, HEAD, OPTIONS]
-          CachedMethods: [GET, HEAD]
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
           Compress: true
           ForwardedValues:
             QueryString: false
+
+        # ============================
+        # API BEHAVIOR (/api/* → ALB)
+        # ============================
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: ALBOrigin
+            ViewerProtocolPolicy: https-only
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+              - PUT
+              - POST
+              - PATCH
+              - DELETE
+            CachedMethods:
+              - OPTIONS
+            Compress: false
+            ForwardedValues:
+              QueryString: true
+              Headers:
+                - '*'
+              Cookies:
+                Forward: all
 
 Outputs:
   BucketName:
