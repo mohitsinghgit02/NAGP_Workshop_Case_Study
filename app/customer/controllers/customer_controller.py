@@ -28,5 +28,6 @@ class CustomerController:
         return {
             "message": "Customer fetched successfully",
             "user_email": response.user.email,
+            "name": "Mohit Singh",
             "roles": [r.role_name for r in response.roles],
         }
