@@ -103,6 +103,7 @@ Resources:
           - PathPattern: /api/*
             TargetOriginId: ALBOrigin
             ViewerProtocolPolicy: https-only
+
             AllowedMethods:
               - GET
               - HEAD
@@ -111,9 +112,15 @@ Resources:
               - POST
               - PATCH
               - DELETE
+
+            # 🚨 MUST be GET/HEAD or GET/HEAD/OPTIONS
             CachedMethods:
+              - GET
+              - HEAD
               - OPTIONS
+
             Compress: false
+
             ForwardedValues:
               QueryString: true
               Headers:
