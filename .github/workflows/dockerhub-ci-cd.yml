@@ -3,8 +3,8 @@ name: Build & Deploy
 on:
   push:
     branches:
-      # - "**"
-      - release/*
+      - "**"
+      # - release/*
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -102,3 +102,45 @@ jobs:
 
           echo "ALB_DNS=$ALB_DNS"
           echo "alb_dns=$ALB_DNS" >> $GITHUB_OUTPUT
+      
+      - name: Deploy Frontend Infra (S3 + CloudFront)
+        run: |
+          aws cloudformation deploy \
+            --stack-name amcart-frontend \
+            --template-file infra/frontend-s3-cloudfront.yml \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameter-overrides ProjectName=amcart
+
+      - name: Get Frontend Infra Outputs
+        id: frontend
+        run: |
+          BUCKET=$(aws cloudformation describe-stacks \
+            --stack-name amcart-frontend \
+            --query "Stacks[0].Outputs[?OutputKey=='BucketName'].OutputValue" \
+            --output text)
+
+          DIST_ID=$(aws cloudformation describe-stacks \
+            --stack-name amcart-frontend \
+            --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" \
+            --output text)
+
+          echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
+          echo "dist_id=$DIST_ID" >> $GITHUB_OUTPUT
+
+      - name: Build frontend
+        working-directory: front
+        env:
+          VITE_API_BASE_URL: https://${{ steps.alb.outputs.alb_dns }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload frontend to S3
+        run: |
+          aws s3 sync front/dist s3://${{ steps.frontend.outputs.bucket }} --delete
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.frontend.outputs.dist_id }} \
+            --paths "/*"
