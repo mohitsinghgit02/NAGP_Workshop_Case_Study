@@ -9,7 +9,6 @@ Parameters:
   ALBDomainName:
     Type: String
     Description: ALB DNS name (without http://)
-    Example: amcart-loadb-xxxx.ap-south-1.elb.amazonaws.com
 
 Resources:
 
