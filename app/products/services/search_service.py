@@ -3,6 +3,7 @@ from db.tinydb import get_all_products
 from db.vector_db import search_vectors
 from common.price_parser import extract_price
 from math import ceil
+import random
 
 
 class ProductSearchService:
@@ -49,3 +50,13 @@ class ProductSearchService:
             "has_next": end < total,
             "results": paginated,
         }
+
+    def get_random_products(self, count: int = 8):
+        if not self.products:
+            return []
+
+        # If products < requested count
+        if len(self.products) <= count:
+            return random.sample(self.products, len(self.products))
+
+        return random.sample(self.products, count)

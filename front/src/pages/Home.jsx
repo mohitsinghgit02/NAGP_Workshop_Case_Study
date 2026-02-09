@@ -1,22 +1,34 @@
-import { useState } from "react";
-import { Container, Grid, Typography, Box } from "@mui/material";
+import { useState, useEffect } from "react";
+import { Container, Grid, Typography, Box, CircularProgress } from "@mui/material";
 import Header from "../components/Header";
 import SideDrawer from "../components/SideDrawer";
 import ImageCarousel from "../components/ImageCarousel";
 import CategoryCard from "../components/CategoryCard";
 import ProductCard from "../components/ProductCard";
 import Footer from "../components/Footer";
+import { fetchTrendingProduct } from "../api/productApi";
 
 export default function Home() {
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const products = Array.from({ length: 8 }).map((_, id) => ({
-        id,
-        name: "Item Name",
-        brand: "Brand",
-        price: 1500,
-        image: "/default/default-product.png",
-    }));
+    useEffect(() => {
+        const fetchTrending = async () => {
+            try {
+                const res = await fetchTrendingProduct(); // axios response
+                setProducts(res.data.products || []);
+            } catch (err) {
+                console.error(err);
+                setError("Failed to load trending products");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTrending();
+    }, []);
 
     return (
         <Box
@@ -117,48 +129,50 @@ export default function Home() {
             <Box
                 sx={{
                     py: 10,
-                    background:
-                        "linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)",
-                    width: "100%",
+                    background: "linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)",
                 }}
             >
-                {/* Section header */}
                 <Box sx={{ mb: 6, textAlign: "center" }}>
-                    <Typography
-                        variant="h4"
-                        fontWeight={800}
-                        sx={{ color: "#0f172a" }}
-                    >
+                    <Typography variant="h4" fontWeight={800}>
                         Trending Products
                     </Typography>
-
-                    <Typography
-                        variant="body1"
-                        sx={{ color: "#475569", mt: 1 }}
-                    >
+                    <Typography sx={{ color: "#475569", mt: 1 }}>
                         Hand-picked styles just for you
                     </Typography>
                 </Box>
 
-                {/* Full-width product panel */}
                 <Box
                     sx={{
-                        maxWidth: "1400px",      // 🔑 wider than Container
-                        mx: "auto",              // center horizontally
-                        px: { xs: 2, sm: 3, md: 5 },   // ✅ horizontal breathing space
-                        py: { xs: 3, md: 4 },          // ✅ top & bottom space
+                        maxWidth: "1400px",
+                        mx: "auto",
+                        px: { xs: 2, sm: 3, md: 5 },
+                        py: { xs: 3, md: 4 },
                         backgroundColor: "#ffffff",
                         borderRadius: 4,
                         boxShadow: "0 20px 40px rgba(15,23,42,0.08)",
                     }}
                 >
-                    <Grid container spacing={3}>
-                        {products.map((p) => (
-                            <Grid item xs={6} sm={4} md={3} key={p.id}>
-                                <ProductCard product={p} />
-                            </Grid>
-                        ))}
-                    </Grid>
+                    {loading && (
+                        <Box sx={{ textAlign: "center", py: 6 }}>
+                            <CircularProgress />
+                        </Box>
+                    )}
+
+                    {error && (
+                        <Typography color="error" align="center">
+                            {error}
+                        </Typography>
+                    )}
+
+                    {!loading && !error && (
+                        <Grid container spacing={3}>
+                            {products.map((p) => (
+                                <Grid item xs={6} sm={4} md={3} key={p.id}>
+                                    <ProductCard product={p} />
+                                </Grid>
+                            ))}
+                        </Grid>
+                    )}
                 </Box>
             </Box>
 
