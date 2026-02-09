@@ -31,6 +31,22 @@ services:
       - app-net
     depends_on:
       - auth
+
+  product:
+    build: 
+      context: ./app/products
+      dockerfile: Dockerfile.api
+    container_name: product-service
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./app/products/data:/app/data
+    env_file:
+      - .env
+    networks:
+      - app-net
+    depends_on:
+      - auth
   
   nginx:
     image: nginx:alpine
@@ -42,6 +58,7 @@ services:
     depends_on:
       - auth
       - customer
+      - product
     networks:
       - app-net
 
