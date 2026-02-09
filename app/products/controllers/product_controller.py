@@ -1,8 +1,10 @@
 # app/customer/controllers/customer_controller.py
 from fastapi import APIRouter, Depends, Header, HTTPException
-from services.product_service import ProductService
+from services.search_service import ProductSearchService
 from common.router_decorator import make_router
-from common.http_decorators import get
+from common.http_decorators import post
+from schemas.search_schema import SearchRequest
+from common.json_sanitizer import sanitize_for_json
 
 router = APIRouter(prefix="/product", tags=["Product"])
 
@@ -10,24 +12,25 @@ router = APIRouter(prefix="/product", tags=["Product"])
 @make_router(router)
 class ProductController:
     def __init__(self):
-        self.product_service = ProductService()
+        self.search_service = ProductSearchService()
 
-    @get("/fetch", summary="Fetch Customers")
-    def fetch_customers(self, x_id_token: str = Header(..., alias="X-Id-Token")):
+    @post("/search", summary="Search products with pagination")
+    def fetch_products(self, request: SearchRequest):
         """
-        Fetch customers and call auth-grpc with ID token.
-        Header: X-Id-Token: <id_token>
+        Search products using semantic search with price filters & pagination.
         """
-        # Call CustomerService
-        response = self.product_service.get_customers(id_token=x_id_token)
-        if not response:
-            raise HTTPException(
-                status_code=500, detail="Failed to fetch user from auth-grpc"
-            )
+        response = self.search_service.search(
+            prompt=request.query,
+            page=request.page,
+            page_size=request.page_size,
+        )
+        if not response or response["total"] == 0:
+            return {
+                "query": request.query,
+                "page": request.page,
+                "page_size": request.page_size,
+                "total": 0,
+                "results": [],
+            }
 
-        return {
-            "message": "Customer fetched successfully",
-            "user_email": response.user.email,
-            "name": "Mohit Singh",
-            "roles": [r.role_name for r in response.roles],
-        }
+        return sanitize_for_json(response)

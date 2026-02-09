@@ -8,3 +8,8 @@ grpcio-tools==1.62.1
 python-jose[cryptography]
 requests
 grpcio-reflection
+tinydb
+pandas
+faiss-cpu
+sentence-transformers
+numpy
