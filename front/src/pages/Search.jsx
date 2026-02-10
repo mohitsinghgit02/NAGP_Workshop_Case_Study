@@ -23,6 +23,7 @@ import Header from "../components/Header";
 import SideDrawer from "../components/SideDrawer";
 import ProductCard from "../components/ProductCard";
 import Footer from "../components/Footer";
+import FilterPopover from "../components/FilterPopover";
 import { searchProducts } from "../api/productApi";
 
 const PAGE_SIZE = 20;
@@ -36,6 +37,7 @@ export default function Search() {
     const [gender, setGender] = useState("All");
     const [category, setCategory] = useState("All");
     const [priceRange, setPriceRange] = useState([0, 5000]);
+    const [subCategory, setSubCategory] = useState("All");
 
     /* ---------------- DATA STATE ---------------- */
     const [products, setProducts] = useState([]);
@@ -223,81 +225,20 @@ export default function Search() {
             </Box>
 
             {/* 🎛️ FILTER POPOVER */}
-            <Popover
-                open={Boolean(filterAnchor)}
-                anchorEl={filterAnchor}
-                onClose={() => setFilterAnchor(null)}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-            >
-                <Box sx={{ p: 3, width: 280 }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                        Filters
-                    </Typography>
-
-                    <TextField
-                        select
-                        fullWidth
-                        size="small"
-                        label="Gender"
-                        value={gender}
-                        onChange={(e) => setGender(e.target.value)}
-                        sx={{ mb: 2 }}
-                    >
-                        <MenuItem value="All">All</MenuItem>
-                        <MenuItem value="Men">Men</MenuItem>
-                        <MenuItem value="Women">Women</MenuItem>
-                    </TextField>
-
-                    <TextField
-                        select
-                        fullWidth
-                        size="small"
-                        label="Category"
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                        sx={{ mb: 3 }}
-                    >
-                        <MenuItem value="All">All</MenuItem>
-                        <MenuItem value="T-Shirts">T-Shirts</MenuItem>
-                        <MenuItem value="Shoes">Shoes</MenuItem>
-                        <MenuItem value="Accessories">Accessories</MenuItem>
-                    </TextField>
-
-                    <Typography variant="body2" gutterBottom>
-                        Price: ₹{priceRange[0]} – ₹{priceRange[1]}
-                    </Typography>
-
-                    <Slider
-                        value={priceRange}
-                        onChange={(e, v) => setPriceRange(v)}
-                        min={0}
-                        max={10000}
-                        step={500}
-                        valueLabelDisplay="auto"
-                    />
-
-                    <Button
-                        fullWidth
-                        variant="contained"
-                        sx={{ mt: 2 }}
-                        onClick={() => handleSearch()}
-                    >
-                        Apply Filters
-                    </Button>
-                    {/* 🔄 CLEAR FILTERS */}
-                    <Button
-                        fullWidth
-                        variant="outlined"
-                        color="secondary"
-                        sx={{ mt: 2 }}
-                        disabled={!filtersApplied}
-                        onClick={handleClearFilters}
-                    >
-                        Clear Filters
-                    </Button>
-                </Box>
-            </Popover>
+            <FilterPopover
+                filterAnchor={filterAnchor}
+                setFilterAnchor={setFilterAnchor}
+                gender={gender}
+                setGender={setGender}
+                category={category}
+                setCategory={setCategory}
+                subCategory={subCategory}
+                setSubCategory={setSubCategory}
+                priceRange={priceRange}
+                setPriceRange={setPriceRange}
+                handleSearch={handleSearch}
+                handleClearFilters={handleClearFilters}
+            />
 
             {/* 🛍️ PRODUCTS */}
             <Container maxWidth={false} sx={{ px: 4, mt: 3 }}>

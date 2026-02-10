@@ -14,16 +14,47 @@ import ExpandMore from "@mui/icons-material/ExpandMore";
 import ManIcon from "@mui/icons-material/Man";
 import WomanIcon from "@mui/icons-material/Woman";
 import CloseIcon from "@mui/icons-material/Close";
-import { useState } from "react";
-
-const categories = {
-    Men: ["T-Shirts", "Shirts", "Jeans", "Jackets"],
-    Women: ["Dresses", "Tops", "Jeans", "Ethnic Wear"],
-};
+import { useState, useEffect } from "react";
+import { filterCategories } from "../api/productApi";
 
 export default function SideDrawer({ open, onClose }) {
-    const [openMen, setOpenMen] = useState(true);
-    const [openWomen, setOpenWomen] = useState(true);
+    const [categoryTree, setCategoryTree] = useState({});
+    const [expandedGender, setExpandedGender] = useState(null); // Only one open
+
+    // Fetch category tree once
+    useEffect(() => {
+        const fetchCategories = async () => {
+            const cached = localStorage.getItem("categoryTree");
+            if (cached) {
+                setCategoryTree(JSON.parse(cached));
+                return;
+            }
+
+            try {
+                const { data } = await filterCategories();
+                if (data.status === "success") {
+                    setCategoryTree(data.data);
+                    localStorage.setItem("categoryTree", JSON.stringify(data.data));
+                }
+            } catch (err) {
+                console.error("Failed to fetch categories:", err);
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
+    const toggleGender = (gender) => {
+        setExpandedGender((prev) => (prev === gender ? null : gender));
+    };
+
+    const genderIcons = {
+        Men: <ManIcon sx={{ mr: 1 }} />,
+        Women: <WomanIcon sx={{ mr: 1 }} />,
+        Boys: <ManIcon sx={{ mr: 1 }} />,
+        Girls: <WomanIcon sx={{ mr: 1 }} />,
+        Unisex: <ManIcon sx={{ mr: 1 }} />,
+    };
 
     return (
         <Drawer
@@ -56,70 +87,65 @@ export default function SideDrawer({ open, onClose }) {
             </Box>
 
             <Box px={1} py={1}>
-                {/* 🧑 MEN */}
-                <ListItemButton
-                    onClick={() => setOpenMen(!openMen)}
-                    sx={{
-                        borderRadius: 2,
-                        mb: 1,
-                        "&:hover": { backgroundColor: "#eef2ff" },
-                    }}
-                >
-                    <ManIcon sx={{ mr: 1 }} />
-                    <ListItemText primary="Men" primaryTypographyProps={{ fontWeight: 600 }} />
-                    {openMen ? <ExpandLess /> : <ExpandMore />}
-                </ListItemButton>
+                {Object.keys(categoryTree).map((gender) => (
+                    <Box key={gender}>
+                        <ListItemButton
+                            onClick={() => toggleGender(gender)}
+                            sx={{
+                                borderRadius: 2,
+                                mb: 1,
+                                "&:hover": { backgroundColor: "#eef2ff" },
+                            }}
+                        >
+                            {genderIcons[gender] || <ManIcon sx={{ mr: 1 }} />}
+                            <ListItemText
+                                primary={gender}
+                                primaryTypographyProps={{ fontWeight: 600 }}
+                            />
+                            {expandedGender === gender ? <ExpandLess /> : <ExpandMore />}
+                        </ListItemButton>
 
-                <Collapse in={openMen} timeout="auto" unmountOnExit>
-                    <List dense sx={{ pl: 4 }}>
-                        {categories.Men.map((item) => (
-                            <ListItemButton
-                                key={item}
-                                sx={{
-                                    borderRadius: 1,
-                                    "&:hover": { backgroundColor: "#f1f5f9" },
-                                }}
-                            >
-                                <ListItemText primary={item} />
-                            </ListItemButton>
-                        ))}
-                    </List>
-                </Collapse>
-
-                <Divider sx={{ my: 1 }} />
-
-                {/* 👩 WOMEN */}
-                <ListItemButton
-                    onClick={() => setOpenWomen(!openWomen)}
-                    sx={{
-                        borderRadius: 2,
-                        mb: 1,
-                        "&:hover": { backgroundColor: "#eef2ff" },
-                    }}
-                >
-                    <WomanIcon sx={{ mr: 1 }} />
-                    <ListItemText
-                        primary="Women"
-                        primaryTypographyProps={{ fontWeight: 600 }}
-                    />
-                    {openWomen ? <ExpandLess /> : <ExpandMore />}
-                </ListItemButton>
-
-                <Collapse in={openWomen} timeout="auto" unmountOnExit>
-                    <List dense sx={{ pl: 4 }}>
-                        {categories.Women.map((item) => (
-                            <ListItemButton
-                                key={item}
-                                sx={{
-                                    borderRadius: 1,
-                                    "&:hover": { backgroundColor: "#f1f5f9" },
-                                }}
-                            >
-                                <ListItemText primary={item} />
-                            </ListItemButton>
-                        ))}
-                    </List>
-                </Collapse>
+                        <Collapse
+                            in={expandedGender === gender}
+                            timeout="auto"
+                            unmountOnExit
+                        >
+                            <List dense sx={{ pl: 4 }}>
+                                {Object.entries(categoryTree[gender]).map(
+                                    ([category, subCategories]) => (
+                                        <Box key={category} sx={{ mb: 1 }}>
+                                            <Typography
+                                                sx={{
+                                                    fontWeight: 600,
+                                                    fontSize: 14,
+                                                    mb: 0.5,
+                                                }}
+                                            >
+                                                {category}
+                                            </Typography>
+                                            <List dense sx={{ pl: 2 }}>
+                                                {subCategories.map((sub) => (
+                                                    <ListItemButton
+                                                        key={sub}
+                                                        sx={{
+                                                            borderRadius: 1,
+                                                            "&:hover": {
+                                                                backgroundColor: "#f1f5f9",
+                                                            },
+                                                        }}
+                                                    >
+                                                        <ListItemText primary={sub} />
+                                                    </ListItemButton>
+                                                ))}
+                                            </List>
+                                        </Box>
+                                    )
+                                )}
+                            </List>
+                        </Collapse>
+                        <Divider sx={{ my: 1 }} />
+                    </Box>
+                ))}
             </Box>
         </Drawer>
     );

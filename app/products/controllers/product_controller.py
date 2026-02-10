@@ -14,22 +14,26 @@ class ProductController:
     def __init__(self):
         self.search_service = ProductSearchService()
 
-    @post("/search", summary="Search products with pagination")
+    @post("/search", summary="Search products with filters & pagination")
     def fetch_products(self, request: SearchRequest):
-        """
-        Search products using semantic search with price filters & pagination.
-        """
         response = self.search_service.search(
             prompt=request.query,
+            category=request.category,
+            gender=request.gender,
+            min_price=request.min_price,
+            max_price=request.max_price,
             page=request.page,
             page_size=request.page_size,
         )
+
         if not response or response["total"] == 0:
             return {
                 "query": request.query,
                 "page": request.page,
                 "page_size": request.page_size,
                 "total": 0,
+                "total_pages": 0,
+                "has_next": False,
                 "results": [],
             }
 
@@ -39,3 +43,9 @@ class ProductController:
     def get_random_products(self):
         products = self.search_service.get_random_products(8)
         return {"count": len(products), "products": sanitize_for_json(products)}
+
+    @get("/filters/categories", summary="Get category & sub-category tree for filters")
+    def fetch_category_tree(self):
+        data = self.search_service.get_category_tree()
+
+        return {"status": "success", "data": data}
