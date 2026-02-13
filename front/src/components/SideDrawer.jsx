@@ -15,13 +15,15 @@ import ManIcon from "@mui/icons-material/Man";
 import WomanIcon from "@mui/icons-material/Woman";
 import CloseIcon from "@mui/icons-material/Close";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { filterCategories } from "../api/productApi";
 
 export default function SideDrawer({ open, onClose }) {
     const [categoryTree, setCategoryTree] = useState({});
-    const [expandedGender, setExpandedGender] = useState(null); // Only one open
+    const [expandedGender, setExpandedGender] = useState(null);
+    const navigate = useNavigate();
 
-    // Fetch category tree once
+    /* ---------------- FETCH CATEGORY TREE ---------------- */
     useEffect(() => {
         const fetchCategories = async () => {
             const cached = localStorage.getItem("categoryTree");
@@ -34,7 +36,10 @@ export default function SideDrawer({ open, onClose }) {
                 const { data } = await filterCategories();
                 if (data.status === "success") {
                     setCategoryTree(data.data);
-                    localStorage.setItem("categoryTree", JSON.stringify(data.data));
+                    localStorage.setItem(
+                        "categoryTree",
+                        JSON.stringify(data.data)
+                    );
                 }
             } catch (err) {
                 console.error("Failed to fetch categories:", err);
@@ -46,6 +51,18 @@ export default function SideDrawer({ open, onClose }) {
 
     const toggleGender = (gender) => {
         setExpandedGender((prev) => (prev === gender ? null : gender));
+    };
+
+    /* ---------------- NAVIGATION ---------------- */
+    const redirectToSearch = ({ gender, category, subCategory }) => {
+        const params = new URLSearchParams();
+
+        if (gender) params.set("gender", gender);
+        if (category) params.set("category", category);
+        if (subCategory) params.set("subCategory", subCategory);
+
+        navigate(`/search?${params.toString()}`);
+        onClose();
     };
 
     const genderIcons = {
@@ -68,7 +85,7 @@ export default function SideDrawer({ open, onClose }) {
                 },
             }}
         >
-            {/* 🔹 Drawer Header */}
+            {/* HEADER */}
             <Box
                 sx={{
                     px: 2,
@@ -102,7 +119,11 @@ export default function SideDrawer({ open, onClose }) {
                                 primary={gender}
                                 primaryTypographyProps={{ fontWeight: 600 }}
                             />
-                            {expandedGender === gender ? <ExpandLess /> : <ExpandMore />}
+                            {expandedGender === gender ? (
+                                <ExpandLess />
+                            ) : (
+                                <ExpandMore />
+                            )}
                         </ListItemButton>
 
                         <Collapse
@@ -114,23 +135,45 @@ export default function SideDrawer({ open, onClose }) {
                                 {Object.entries(categoryTree[gender]).map(
                                     ([category, subCategories]) => (
                                         <Box key={category} sx={{ mb: 1 }}>
-                                            <Typography
+                                            {/* CATEGORY CLICK */}
+                                            <ListItemButton
+                                                onClick={() =>
+                                                    redirectToSearch({
+                                                        gender,
+                                                        category,
+                                                    })
+                                                }
                                                 sx={{
-                                                    fontWeight: 600,
-                                                    fontSize: 14,
-                                                    mb: 0.5,
+                                                    borderRadius: 1,
+                                                    py: 0.5,
                                                 }}
                                             >
-                                                {category}
-                                            </Typography>
+                                                <ListItemText
+                                                    primary={category}
+                                                    primaryTypographyProps={{
+                                                        fontWeight: 600,
+                                                        fontSize: 14,
+                                                    }}
+                                                />
+                                            </ListItemButton>
+
+                                            {/* SUB-CATEGORY */}
                                             <List dense sx={{ pl: 2 }}>
                                                 {subCategories.map((sub) => (
                                                     <ListItemButton
                                                         key={sub}
+                                                        onClick={() =>
+                                                            redirectToSearch({
+                                                                gender,
+                                                                category,
+                                                                subCategory: sub,
+                                                            })
+                                                        }
                                                         sx={{
                                                             borderRadius: 1,
                                                             "&:hover": {
-                                                                backgroundColor: "#f1f5f9",
+                                                                backgroundColor:
+                                                                    "#f1f5f9",
                                                             },
                                                         }}
                                                     >

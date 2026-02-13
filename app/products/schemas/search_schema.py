@@ -3,10 +3,11 @@ from pydantic import BaseModel, Field
 
 
 class SearchRequest(BaseModel):
-    query: Optional[str] = Field(..., min_length=1)
+    query: Optional[str] = None
 
     category: Optional[str] = None
     gender: Optional[str] = None
+    subCategory: Optional[str] = None
 
     min_price: Optional[int] = Field(None, ge=0)
     max_price: Optional[int] = Field(None, ge=0)

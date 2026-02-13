@@ -1,22 +1,36 @@
+import os
 from sentence_transformers import SentenceTransformer
 from db.tinydb import get_all_products
 from db.vector_db import search_vectors
-from common.price_parser import extract_price
 from math import ceil
-from typing import Optional
+from typing import Optional, Dict, Any
 import random
 from collections import defaultdict
+from threading import Lock
+
+
+MODEL_NAME = os.getenv("MODEL_NAME", "all-MiniLM-L6-v2")
+
+_model = None
+_model_lock = Lock()
+
+
+def get_model():
+    global _model
+    if _model is None:
+        with _model_lock:
+            if _model is None:
+                _model = SentenceTransformer(MODEL_NAME)
+    return _model
 
 
 class ProductSearchService:
     def __init__(
         self,
-        model_name: str = "all-MiniLM-L6-v2",
         vector_top_k: int = 200,  # 🔥 important for pagination
     ):
-        self.model = SentenceTransformer(model_name)
-        self.products = get_all_products()
         self.vector_top_k = vector_top_k
+        self.products = get_all_products()
 
     def search(
         self,
@@ -24,47 +38,59 @@ class ProductSearchService:
         page: int = 1,
         page_size: int = 10,
         category: Optional[str] = None,
+        subCategory: Optional[str] = None,
         gender: Optional[str] = None,
         min_price: Optional[int] = None,
         max_price: Optional[int] = None,
     ):
-        # 1️⃣ Vector search (semantic)
-        query_vec = self.model.encode([prompt])
-        indices = search_vectors(query_vec, self.vector_top_k)
+        # # 1️⃣ Vector search (semantic)
+        # query_vec = self.model.encode([prompt])
+        # indices = search_vectors(query_vec, self.vector_top_k)
 
-        # 2️⃣ Apply structured filters
-        filtered = []
-        for i in indices:
-            p = self.products[i]
+        model = get_model()
 
-            price = p.get("price", 0)
+        # 1️⃣ Encode query
+        query_vec = model.encode([prompt])
 
-            if min_price is not None and price < min_price:
-                continue
-            if max_price is not None and price > max_price:
-                continue
+        # 2️⃣ Vector search (delegated to db layer)
+        distances, indices = search_vectors(query_vec, self.vector_top_k)
 
-            if category and p.get("category") != category:
-                continue
+        matched_indices = indices[0]
 
-            if gender and p.get("gender") != gender:
+        # 3️⃣ Apply filters
+        results = []
+        for idx in matched_indices:
+            if idx < 0 or idx >= len(self.products):
                 continue
 
-            filtered.append(p)
+            product = self.products[idx]
 
-        total = len(filtered)
+            if category and product.get("category") != category:
+                continue
+            if subCategory and product.get("subCategory") != subCategory:
+                continue
+            if gender and product.get("gender") != gender:
+                continue
+            if min_price and product.get("price") < min_price:
+                continue
+            if max_price and product.get("price") > max_price:
+                continue
 
-        # 3️⃣ Pagination
+            results.append(product)
+
+        total = len(results)
+
+        # 4️⃣ Pagination
         start = (page - 1) * page_size
         end = start + page_size
-        paginated = filtered[start:end]
+        paginated = results[start:end]
 
         return {
             "query": prompt,
             "page": page,
             "page_size": page_size,
             "total": total,
-            "total_pages": ceil(total / page_size) if total else 0,
+            "total_pages": (total + page_size - 1) // page_size,
             "has_next": end < total,
             "results": paginated,
         }

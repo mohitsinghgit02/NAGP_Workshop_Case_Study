@@ -1,19 +1,38 @@
 import { Card, CardMedia, CardContent, Typography, Box } from "@mui/material";
+import { useNavigate, useLocation } from "react-router-dom";
 
-export default function CategoryCard({ title, image }) {
+export default function CategoryCard({ title, image, url }) {
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const handleClick = () => {
+        // If already on same path, force navigation to trigger effects
+        if (location.pathname + location.search === url) {
+            navigate(url, { replace: true });
+        } else {
+            navigate(url);
+        }
+    };
+
     return (
         <Card
+            onClick={handleClick}
             sx={{
                 cursor: "pointer",
                 height: "100%",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                "&:hover": {
+                    transform: "translateY(-4px)",
+                    boxShadow: 4,
+                },
             }}
         >
             {/* Image wrapper */}
             <Box
                 sx={{
                     width: "100%",
-                    aspectRatio: "1 / 1",   // 300x300
-                    backgroundColor: "#f5f5f5", // prevents white gaps
+                    aspectRatio: "1 / 1",
+                    backgroundColor: "#f5f5f5",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -26,7 +45,7 @@ export default function CategoryCard({ title, image }) {
                     sx={{
                         maxWidth: "100%",
                         maxHeight: "100%",
-                        objectFit: "contain", // 🔑 FIX: NO CROPPING
+                        objectFit: "contain",
                     }}
                 />
             </Box>

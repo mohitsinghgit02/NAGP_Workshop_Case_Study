@@ -116,10 +116,10 @@ export default function Home() {
 
                     <Grid container spacing={4}>
                         <Grid item xs={12} md={6}>
-                            <CategoryCard title="Men" image="/categories/men.png" />
+                            <CategoryCard title="Men" image="/categories/men.png" url="/search?gender=Men" />
                         </Grid>
                         <Grid item xs={12} md={6}>
-                            <CategoryCard title="Women" image="/categories/women.png" />
+                            <CategoryCard title="Women" image="/categories/women.png" url="/search?gender=Women" />
                         </Grid>
                     </Grid>
                 </Container>

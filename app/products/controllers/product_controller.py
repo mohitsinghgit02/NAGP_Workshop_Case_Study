@@ -16,10 +16,29 @@ class ProductController:
 
     @post("/search", summary="Search products with filters & pagination")
     def fetch_products(self, request: SearchRequest):
+        # Collect optional parts
+        parts = [
+            request.query,
+            request.gender,
+            request.category,
+            request.subCategory,
+        ]
+
+        # Remove None / empty strings
+        parts = [p.strip() for p in parts if p and p.strip()]
+
+        # Rule 1: all empty → default query
+        if not parts:
+            final_query = "Men and Women cloth"
+        else:
+            # Rule 2: combine available values
+            final_query = " ".join(parts)
+
         response = self.search_service.search(
-            prompt=request.query,
+            prompt=final_query,
             category=request.category,
             gender=request.gender,
+            subCategory=request.subCategory,
             min_price=request.min_price,
             max_price=request.max_price,
             page=request.page,
