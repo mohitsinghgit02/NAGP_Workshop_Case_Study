@@ -30,21 +30,15 @@ export default function Search() {
 
     const [drawerOpen, setDrawerOpen] = useState(false);
 
-    /* ---------------- UI FILTER STATE (DRAFT) ---------------- */
+    /* ---------------- UI FILTER STATE ---------------- */
     const [query, setQuery] = useState("");
     const [gender, setGender] = useState("All");
     const [category, setCategory] = useState("All");
     const [subCategory, setSubCategory] = useState("All");
     const [priceRange, setPriceRange] = useState([0, 5000]);
 
-    /* ---------------- APPLIED FILTERS (API SOURCE) ---------------- */
-    const [appliedFilters, setAppliedFilters] = useState({
-        query: "",
-        gender: "All",
-        category: "All",
-        subCategory: "All",
-        priceRange: [0, 5000],
-    });
+    /* ---------------- APPLIED FILTERS ---------------- */
+    const [appliedFilters, setAppliedFilters] = useState(null);
 
     /* ---------------- DATA STATE ---------------- */
     const [products, setProducts] = useState([]);
@@ -52,25 +46,24 @@ export default function Search() {
     const [hasMore, setHasMore] = useState(true);
     const [loading, setLoading] = useState(false);
 
-    /* ---------------- FILTER POPOVER ---------------- */
     const [filterAnchor, setFilterAnchor] = useState(null);
     const observerRef = useRef(null);
 
     /* ---------------- FILTER INDICATOR ---------------- */
     const filtersApplied =
-        appliedFilters.gender !== "All" ||
-        appliedFilters.category !== "All" ||
-        appliedFilters.subCategory !== "All" ||
-        appliedFilters.priceRange[0] !== 0 ||
-        appliedFilters.priceRange[1] !== 5000;
+        appliedFilters &&
+        (appliedFilters.gender !== "All" ||
+            appliedFilters.category !== "All" ||
+            appliedFilters.subCategory !== "All" ||
+            appliedFilters.priceRange[0] !== 0 ||
+            appliedFilters.priceRange[1] !== 5000);
 
-    /* ---------------- SCROLL ---------------- */
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
     /* =========================================================
-       🔥 SYNC URL → FILTERS → API (KEY FIX)
+       ✅ SYNC URL → FILTERS
     ========================================================= */
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -80,13 +73,11 @@ export default function Search() {
         const urlCategory = params.get("category") || "All";
         const urlSubCategory = params.get("subCategory") || "All";
 
-        // Update UI
         setQuery(urlQuery);
         setGender(urlGender);
         setCategory(urlCategory);
         setSubCategory(urlSubCategory);
 
-        // Apply filters for API
         setAppliedFilters({
             query: urlQuery,
             gender: urlGender,
@@ -101,9 +92,25 @@ export default function Search() {
         scrollToTop();
     }, [location.search]);
 
+    /* =========================================================
+       ✅ LOAD PRODUCTS WHEN FILTER VALUES CHANGE
+    ========================================================= */
+    useEffect(() => {
+        if (!appliedFilters) return;
+        loadProducts(1, true);
+        // eslint-disable-next-line
+    }, [
+        appliedFilters?.query,
+        appliedFilters?.gender,
+        appliedFilters?.category,
+        appliedFilters?.subCategory,
+        appliedFilters?.priceRange,
+    ]);
+
     /* ---------------- API ---------------- */
     const loadProducts = async (pageNo, reset = false) => {
-        if (loading || (!hasMore && !reset)) return;
+        if (loading || (!hasMore && !reset) || !appliedFilters) return;
+
         setLoading(true);
 
         const {
@@ -139,7 +146,7 @@ export default function Search() {
         }
     };
 
-    /* ---------------- APPLY SEARCH / FILTER ---------------- */
+    /* ---------------- APPLY SEARCH ---------------- */
     const handleSearch = () => {
         setAppliedFilters({
             query,
@@ -179,12 +186,6 @@ export default function Search() {
         setFilterAnchor(null);
     };
 
-    /* ---------------- LOAD ON FILTER APPLY ---------------- */
-    useEffect(() => {
-        loadProducts(1, true);
-        // eslint-disable-next-line
-    }, [appliedFilters]);
-
     /* ---------------- INFINITE SCROLL ---------------- */
     useEffect(() => {
         if (!observerRef.current || loading) return;
@@ -202,10 +203,21 @@ export default function Search() {
     return (
         <Box sx={{ minHeight: "100vh", bgcolor: "#f9fafb" }}>
             <Header onMenuClick={() => setDrawerOpen(true)} />
-            <SideDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+            <SideDrawer
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+            />
 
             {/* SEARCH BAR */}
-            <Box sx={{ position: "sticky", top: 64, zIndex: 10, bgcolor: "#fff", borderBottom: "1px solid #e5e7eb" }}>
+            <Box
+                sx={{
+                    position: "sticky",
+                    top: 64,
+                    zIndex: 10,
+                    bgcolor: "#fff",
+                    borderBottom: "1px solid #e5e7eb",
+                }}
+            >
                 <Container maxWidth={false} sx={{ px: 4, py: 2 }}>
                     <Grid container spacing={2} alignItems="center">
                         <Grid item xs={12} md={9}>
@@ -214,8 +226,12 @@ export default function Search() {
                                 size="small"
                                 placeholder="Search products"
                                 value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                                onChange={(e) =>
+                                    setQuery(e.target.value)
+                                }
+                                onKeyDown={(e) =>
+                                    e.key === "Enter" && handleSearch()
+                                }
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
@@ -227,26 +243,51 @@ export default function Search() {
                         </Grid>
 
                         <Grid item xs={8} md={2}>
-                            <Button fullWidth variant="contained" onClick={handleSearch}>
+                            <Button
+                                fullWidth
+                                variant="contained"
+                                onClick={handleSearch}
+                            >
                                 Search
                             </Button>
                         </Grid>
 
                         <Grid item xs={4} md={1}>
-                            <Badge color="primary" variant="dot" invisible={!filtersApplied}>
-                                <IconButton onClick={(e) => setFilterAnchor(e.currentTarget)}>
+                            <Badge
+                                color="primary"
+                                variant="dot"
+                                invisible={!filtersApplied}
+                            >
+                                <IconButton
+                                    onClick={(e) =>
+                                        setFilterAnchor(e.currentTarget)
+                                    }
+                                >
                                     <FilterAltIcon />
                                 </IconButton>
                             </Badge>
                         </Grid>
                     </Grid>
 
-                    {/* FILTER CHIPS */}
                     {filtersApplied && (
                         <Box sx={{ mt: 1 }}>
-                            {appliedFilters.gender !== "All" && <Chip label={`Gender: ${appliedFilters.gender}`} sx={{ mr: 1 }} />}
-                            {appliedFilters.category !== "All" && <Chip label={`Category: ${appliedFilters.category}`} sx={{ mr: 1 }} />}
-                            {appliedFilters.subCategory !== "All" && <Chip label={`Sub-Category: ${appliedFilters.subCategory}`} />}
+                            {appliedFilters.gender !== "All" && (
+                                <Chip
+                                    label={`Gender: ${appliedFilters.gender}`}
+                                    sx={{ mr: 1 }}
+                                />
+                            )}
+                            {appliedFilters.category !== "All" && (
+                                <Chip
+                                    label={`Category: ${appliedFilters.category}`}
+                                    sx={{ mr: 1 }}
+                                />
+                            )}
+                            {appliedFilters.subCategory !== "All" && (
+                                <Chip
+                                    label={`Sub-Category: ${appliedFilters.subCategory}`}
+                                />
+                            )}
                         </Box>
                     )}
                 </Container>
