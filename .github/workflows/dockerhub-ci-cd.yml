@@ -3,8 +3,8 @@ name: Build & Deploy
 on:
   push:
     branches:
-      # - "**"
-      - release/*
+      - "**"
+      # - release/*
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -55,6 +55,13 @@ jobs:
           docker build -f ./app/customer/Dockerfile.api -t amcart-customer:${{ steps.vars.outputs.tag }} ./app/customer
           docker tag amcart-customer:${{ steps.vars.outputs.tag }} ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-customer:${{ steps.vars.outputs.tag }}
           docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-customer:${{ steps.vars.outputs.tag }}
+
+      # Build & push Product image
+      - name: Build & Push Product image
+        run: |
+          docker build -f ./app/products/Dockerfile.api -t amcart-product:${{ steps.vars.outputs.tag }} ./app/products
+          docker tag amcart-product:${{ steps.vars.outputs.tag }} ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-product:${{ steps.vars.outputs.tag }}
+          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-product:${{ steps.vars.outputs.tag }}
 
       # Build & push Nginx image
       - name: Build & Push Nginx image

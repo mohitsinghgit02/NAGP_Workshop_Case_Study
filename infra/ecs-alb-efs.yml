@@ -213,6 +213,47 @@ Resources:
             - SourceVolume: efs-volume
               ContainerPath: /app/data
 
+        # ---------- PRODUCT ----------
+        - Name: product
+          Image: !Sub ${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-product:${ImageTag}
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/amcart
+              awslogs-region: !Ref AWSRegion
+              awslogs-stream-prefix: product
+
+          Environment:
+            - Name: APP_ENV
+              Value: dev
+            - Name: SERVICE_NAME
+              Value: product
+            - Name: AUTH_GRPC_HOST
+              Value: localhost
+            - Name: AUTH_GRPC_PORT
+              Value: "50051"
+
+          Secrets:
+            - Name: PRODUCT_DB_PATH
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/customer/PRODUCT_DB_PATH
+            - Name: AWS_REGION
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_REGION
+            - Name: AWS_ACCESS_KEY_ID
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_ACCESS_KEY_ID
+            - Name: AWS_SECRET_ACCESS_KEY
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_SECRET_ACCESS_KEY
+            - Name: COGNITO_POOL_ID
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_POOL_ID
+            - Name: COGNITO_CLIENT_ID
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_CLIENT_ID
+            - Name: COGNITO_SYSTEM_PASSWORD
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_SYSTEM_PASSWORD
+
+          MountPoints:
+            - SourceVolume: efs-volume
+              ContainerPath: /app/data
+
   # ---------- ECS SERVICE ----------
   ECSService:
     Type: AWS::ECS::Service
