@@ -236,7 +236,7 @@ Resources:
 
           Secrets:
             - Name: PRODUCT_DB_PATH
-              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/customer/PRODUCT_DB_PATH
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/product/PRODUCT_DB_PATH
             - Name: AWS_REGION
               ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/AWS_REGION
             - Name: AWS_ACCESS_KEY_ID
