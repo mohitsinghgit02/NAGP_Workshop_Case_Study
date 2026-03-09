@@ -93,8 +93,8 @@ jobs:
             --template-file infra/ecs-alb-efs.yml \
             --capabilities CAPABILITY_NAMED_IAM \
             --parameter-overrides \
-              VpcId=vpc-07cf0bd2defe827ee \
-              Subnets=subnet-002e4892bb31ff833,subnet-019e055615dc1a073 \
+              VpcId=vpc-09e19aca5a3123093 \
+              Subnets=subnet-0b66489655726f375,subnet-04828606c4d061f90 \
               ImageTag=${{ needs.build.outputs.image_tag }} \
               AWSAccountId=${{ env.AWS_ACCOUNT_ID }} \
               AWSRegion=${{ env.AWS_REGION }}
