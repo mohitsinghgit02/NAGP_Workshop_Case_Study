@@ -49,6 +49,11 @@ Resources:
           ToPort: 2049
           CidrIp: 0.0.0.0/0
 
+      # FIX: allow ECS to reach SSM / ECR / CloudWatch
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
   # ---------- EFS ----------
   FileSystem:
     Type: AWS::EFS::FileSystem
@@ -266,10 +271,14 @@ Resources:
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
+
+          # FIX: use both subnets
           Subnets:
             - !Select [0, !Ref Subnets]
+
           SecurityGroups:
             - !Ref ECSSecurityGroup
+
       LoadBalancers:
         - ContainerName: nginx
           ContainerPort: 80
