@@ -255,10 +255,6 @@ Resources:
             - Name: COGNITO_SYSTEM_PASSWORD
               ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_SYSTEM_PASSWORD
 
-          MountPoints:
-            - SourceVolume: efs-volume
-              ContainerPath: /app/data
-
   # ---------- ECS SERVICE ----------
   ECSService:
     Type: AWS::ECS::Service
