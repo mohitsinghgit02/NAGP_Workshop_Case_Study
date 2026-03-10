@@ -7,9 +7,11 @@ import {
     Alert,
 } from "@mui/material";
 import { useState } from "react";
+
 import OtpInput from "./OtpInput";
 import NewUserForm from "./NewUserForm";
 import { useAuth } from "../../context/AuthContext";
+
 import {
     sendOtp,
     verifyOtp,
@@ -17,27 +19,39 @@ import {
 } from "../../api/authApi";
 
 export default function AuthDialog({ open, onClose }) {
-    const [step, setStep] = useState("PHONE");
-    const [phone, setPhone] = useState("");
+
+    const [step, setStep] = useState("EMAIL");
+    const [email, setEmail] = useState("");
     const [otpMeta, setOtpMeta] = useState(null);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
     const { login } = useAuth();
 
-    /* 📲 SEND OTP */
+    /* EMAIL VALIDATION */
+
+    const validateEmail = (email) => {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
+    /* SEND OTP */
+
     const handleSendOtp = async () => {
-        if (!/^[6-9]\d{9}$/.test(phone)) {
-            setError("Enter a valid 10-digit mobile number");
+
+        if (!validateEmail(email)) {
+            setError("Enter a valid email address");
             return;
         }
 
         try {
             setLoading(true);
             setError("");
-            const res = await sendOtp(phone);
+
+            const res = await sendOtp(email);
+
             setOtpMeta(res.data);
             setStep("OTP");
+
         } catch {
             setError("Failed to send OTP. Try again.");
         } finally {
@@ -45,24 +59,40 @@ export default function AuthDialog({ open, onClose }) {
         }
     };
 
-    /* 🔐 VERIFY OTP */
+    /* VERIFY OTP */
+
     const handleVerifyOtp = async (otp) => {
+
         try {
+
             setLoading(true);
             setError("");
 
-            const res = await verifyOtp(phone, otp);
+            const res = await verifyOtp(email, otp);
 
-            // Save tokens
-            localStorage.setItem("access_token", res.data.token.access_token);
-            localStorage.setItem("id_token", res.data.token.id_token);
+            /* Save tokens */
+
+            localStorage.setItem(
+                "access_token",
+                res.data.token.access_token
+            );
+
+            localStorage.setItem(
+                "id_token",
+                res.data.token.id_token
+            );
 
             if (res.data.status === "NEW_USER") {
+
                 setOtpMeta(res.data);
                 setStep("NEW_USER");
+
             } else {
+
                 await loadCustomerAndLogin();
+
             }
+
         } catch {
             setError("Invalid OTP. Please try again.");
         } finally {
@@ -70,9 +100,12 @@ export default function AuthDialog({ open, onClose }) {
         }
     };
 
-    /* 👤 FETCH CUSTOMER & LOGIN */
+    /* FETCH CUSTOMER */
+
     const loadCustomerAndLogin = async () => {
+
         try {
+
             const res = await fetchCustomer();
 
             login(
@@ -88,6 +121,7 @@ export default function AuthDialog({ open, onClose }) {
             );
 
             onClose();
+
         } catch {
             setError("Unable to fetch user details");
         }
@@ -96,13 +130,16 @@ export default function AuthDialog({ open, onClose }) {
     return (
         <Dialog open={open} onClose={onClose}>
             <Box p={3} width={360}>
+
                 {error && (
                     <Alert severity="error" sx={{ mb: 2 }}>
                         {error}
                     </Alert>
                 )}
 
-                {step === "PHONE" && (
+                {/* EMAIL STEP */}
+
+                {step === "EMAIL" && (
                     <>
                         <Typography fontWeight={700} mb={1}>
                             Login / Sign Up
@@ -110,12 +147,11 @@ export default function AuthDialog({ open, onClose }) {
 
                         <TextField
                             fullWidth
-                            label="Mobile Number"
+                            label="Email Address"
                             margin="normal"
-                            value={phone}
-                            inputProps={{ maxLength: 10 }}
+                            value={email}
                             onChange={(e) =>
-                                setPhone(e.target.value.replace(/\D/g, ""))
+                                setEmail(e.target.value.trim())
                             }
                         />
 
@@ -130,20 +166,26 @@ export default function AuthDialog({ open, onClose }) {
                     </>
                 )}
 
+                {/* OTP STEP */}
+
                 {step === "OTP" && (
                     <OtpInput
                         onSubmit={handleVerifyOtp}
                         onResend={handleSendOtp}
+                        email={email}
                     />
                 )}
 
+                {/* NEW USER FORM */}
+
                 {step === "NEW_USER" && (
                     <NewUserForm
-                        phone={phone}
+                        email={email}
                         otpMeta={otpMeta}
                         onSuccess={loadCustomerAndLogin}
                     />
                 )}
+
             </Box>
         </Dialog>
     );
