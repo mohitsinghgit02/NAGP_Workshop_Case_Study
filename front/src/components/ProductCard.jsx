@@ -5,18 +5,29 @@ import {
     IconButton,
 } from "@mui/material";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import { useNavigate } from "react-router-dom";
 
 export default function ProductCard({ product }) {
+
+    const navigate = useNavigate();
+
     const {
+        id,
         productDisplayName,
         category,
         price,
         image_path,
     } = product;
 
+    const handleOpenProduct = () => {
+        navigate(`/product/${id}`, { state: product });
+    };
+
     return (
         <Card
+            onClick={handleOpenProduct}
             sx={{
+                cursor: "pointer",
                 position: "relative",
                 borderRadius: 3,
                 overflow: "hidden",
@@ -29,7 +40,7 @@ export default function ProductCard({ product }) {
                 },
             }}
         >
-            {/* ❤️ Wishlist */}
+            {/* Wishlist */}
             <IconButton
                 sx={{
                     position: "absolute",
@@ -38,13 +49,12 @@ export default function ProductCard({ product }) {
                     zIndex: 2,
                     backgroundColor: "#fff",
                     boxShadow: 1,
-                    "&:hover": { backgroundColor: "#f8fafc" },
                 }}
             >
                 <FavoriteBorderIcon fontSize="small" />
             </IconButton>
 
-            {/* 🖼 Image */}
+            {/* Image */}
             <Box
                 component="img"
                 src={image_path || "/default/default-product.png"}
@@ -58,7 +68,7 @@ export default function ProductCard({ product }) {
                 }}
             />
 
-            {/* ℹ️ Product Info */}
+            {/* Info */}
             <Box sx={{ p: 1.5 }}>
                 <Typography fontSize={14} fontWeight={600} noWrap>
                     {productDisplayName}
