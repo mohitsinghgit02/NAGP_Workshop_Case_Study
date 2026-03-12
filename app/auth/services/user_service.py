@@ -21,6 +21,7 @@ class UserService:
 
         # 🔐 Role mapping
         role_id = 1 if data.user_type == "admin" else 2
+        customer_id = None
 
         # 1️⃣ Create or update USER table
         user = db.query(User).filter(User.user_id == user_id).first()
@@ -52,7 +53,9 @@ class UserService:
 
         # 3️⃣ Customer → call Customer service
         if data.user_type == "customer":
-            self.customer_client.create_customer(user_id)
+            customer_id = self.customer_client.create_customer(
+                user_id, data.model_dump()
+            )
 
         # 4️⃣ Admin → create admin profile
         if data.user_type == "admin":

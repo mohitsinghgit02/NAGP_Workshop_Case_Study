@@ -16,4 +16,6 @@ class AddUserRequest(BaseModel):
     phone: Optional[str] = None
     user_type: str  # admin | customer
     first_name: Optional[str] = None
-    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    pin_code: Optional[str] = None
+    city: Optional[str] = None

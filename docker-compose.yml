@@ -22,6 +22,7 @@ services:
     container_name: customer-service
     ports:
       - "8002:8000"
+      - "50052:50052"   # gRPC
     volumes:
       - ./app/customer/data:/app/data
     env_file:

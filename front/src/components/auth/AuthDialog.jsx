@@ -108,11 +108,17 @@ export default function AuthDialog({ open, onClose }) {
 
             const res = await fetchCustomer();
 
+            const data = res.data.data;
+
+            const name = `${data.customer?.first_name || ""} ${data.customer?.last_name || ""}`.trim();
+
             login(
                 {
-                    name: res.data.name,
-                    email: res.data.user_email,
-                    roles: res.data.roles,
+                    name: name,
+                    email: data.user.email,
+                    roles: data.roles,
+                    customer_id: data.customer?.customer_id,
+                    address: data.address
                 },
                 {
                     access_token: localStorage.getItem("access_token"),
