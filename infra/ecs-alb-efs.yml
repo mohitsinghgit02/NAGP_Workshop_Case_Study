@@ -156,6 +156,10 @@ Resources:
               Value: "8000"
             - Name: AUTH_GRPC_PORT
               Value: "50051"
+            - Name: CUSTOMER_GRPC_HOST
+              Value: localhost
+            - Name: CUSTOMER_GRPC_PORT
+              Value: "50052"
 
           Secrets:
             - Name: AUTH_DB_PATH
@@ -181,6 +185,9 @@ Resources:
         - Name: customer
           Image: !Sub ${AWSAccountId}.dkr.ecr.${AWSRegion}.amazonaws.com/amcart-customer:${ImageTag}
           Essential: true
+          PortMappings:
+            - ContainerPort: 8000
+            - ContainerPort: 50052
           LogConfiguration:
             LogDriver: awslogs
             Options:
