@@ -3,11 +3,15 @@ import {
     Box,
     Typography,
     IconButton,
+    Button,
+    Stack
 } from "@mui/material";
 
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -25,6 +29,7 @@ export default function ProductCard({ product }) {
 
     const [authOpen, setAuthOpen] = useState(false);
     const [liked, setLiked] = useState(false);
+    const [cartQty, setCartQty] = useState(0);
 
     const {
         id,
@@ -34,7 +39,9 @@ export default function ProductCard({ product }) {
         image_path,
     } = product;
 
+    /* ------------------- */
     /* CHECK LIKE STATUS */
+    /* ------------------- */
 
     const checkLiked = () => {
 
@@ -48,39 +55,46 @@ export default function ProductCard({ product }) {
         setLiked(exists);
     };
 
-    /* RUN WHEN COMPONENT LOADS */
+    /* ------------------- */
+    /* CHECK CART STATUS */
+    /* ------------------- */
 
-    useEffect(() => {
-        checkLiked();
-    }, [id]);
+    const checkCart = () => {
 
-    /* RUN WHEN USER LOGIN / LOGOUT */
+        const storage =
+            JSON.parse(localStorage.getItem("cart_products") || '{"cart_products":[]}');
 
-    useEffect(() => {
-        checkLiked();
-    }, [user]);
+        const cartProducts = storage.cart_products || [];
 
-    /* LISTEN FOR LOCAL STORAGE CHANGES */
+        const item = cartProducts.find(p => p.product_id == id);
 
-    useEffect(() => {
-
-        const handleStorageUpdate = () => {
-            checkLiked();
-        };
-
-        window.addEventListener("storage", handleStorageUpdate);
-
-        return () => {
-            window.removeEventListener("storage", handleStorageUpdate);
-        };
-
-    }, []);
-
-    const handleOpenProduct = () => {
-        navigate(`/product/${id}`, { state: product });
+        setCartQty(item ? item.quantity : 0);
     };
 
+    /* ------------------- */
+    /* INITIAL LOAD */
+    /* ------------------- */
+
+    useEffect(() => {
+
+        checkLiked();
+        checkCart();
+
+    }, [id, user]);
+
+    /* ------------------- */
+    /* OPEN PRODUCT */
+    /* ------------------- */
+
+    const handleOpenProduct = () => {
+
+        navigate(`/product/${id}`, { state: product });
+
+    };
+
+    /* ------------------- */
     /* LIKE BUTTON */
+    /* ------------------- */
 
     const handleLike = async (e) => {
 
@@ -131,9 +145,65 @@ export default function ProductCard({ product }) {
         }
     };
 
-    /* CART BUTTON */
+    /* ------------------- */
+    /* UPDATE CART */
+    /* ------------------- */
 
-    const handleAddToCart = async (e) => {
+    const updateCart = async (newQty) => {
+
+        let storage =
+            JSON.parse(localStorage.getItem("cart_products") || '{"cart_products":[]}');
+
+        let cartProducts = storage.cart_products || [];
+
+        const index = cartProducts.findIndex(p => p.product_id == id);
+
+        if (newQty <= 0) {
+
+            cartProducts =
+                cartProducts.filter(p => p.product_id != id);
+
+        } else {
+
+            if (index !== -1) {
+
+                cartProducts[index].quantity = newQty;
+
+            } else {
+
+                cartProducts.push({
+                    product_id: id,
+                    quantity: newQty
+                });
+
+            }
+        }
+
+        storage.cart_products = cartProducts;
+
+        localStorage.setItem(
+            "cart_products",
+            JSON.stringify(storage)
+        );
+
+        setCartQty(newQty);
+
+        try {
+
+            await updateCartProduct(id, newQty);
+
+        } catch (err) {
+
+            console.error("Cart API failed", err);
+
+        }
+    };
+
+    /* ------------------- */
+    /* ADD TO CART */
+    /* ------------------- */
+
+    const handleAddToCart = (e) => {
 
         e.stopPropagation();
 
@@ -142,48 +212,21 @@ export default function ProductCard({ product }) {
             return;
         }
 
-        try {
+        updateCart(1);
+    };
 
-            await updateCartProduct(id, 1);
+    const increaseQty = (e) => {
 
-            let storage =
-                JSON.parse(localStorage.getItem("cart_products") || '{"cart_products":[]}');
+        e.stopPropagation();
 
-            let cartProducts = storage.cart_products || [];
+        updateCart(cartQty + 1);
+    };
 
-            const exists = cartProducts.some(p => p.product_id == id);
+    const decreaseQty = (e) => {
 
-            if (exists) {
+        e.stopPropagation();
 
-                cartProducts = cartProducts.map(p =>
-                    p.product_id == id
-                        ? { ...p, quantity: (p.quantity || 1) + 1 }
-                        : p
-                );
-
-            } else {
-
-                cartProducts.push({
-                    product_id: id,
-                    quantity: 1
-                });
-
-            }
-
-            storage.cart_products = cartProducts;
-
-            localStorage.setItem(
-                "cart_products",
-                JSON.stringify(storage)
-            );
-
-            console.log("Added to cart:", id);
-
-        } catch (err) {
-
-            console.error("Cart API failed", err);
-
-        }
+        updateCart(cartQty - 1);
     };
 
     return (
@@ -206,6 +249,7 @@ export default function ProductCard({ product }) {
             >
 
                 {/* LIKE BUTTON */}
+
                 <IconButton
                     onClick={handleLike}
                     sx={{
@@ -224,22 +268,8 @@ export default function ProductCard({ product }) {
                     )}
                 </IconButton>
 
-                {/* CART BUTTON */}
-                <IconButton
-                    onClick={handleAddToCart}
-                    sx={{
-                        position: "absolute",
-                        bottom: 10,
-                        right: 10,
-                        zIndex: 2,
-                        backgroundColor: "#fff",
-                        boxShadow: 1,
-                    }}
-                >
-                    <ShoppingCartIcon fontSize="small" />
-                </IconButton>
-
                 {/* PRODUCT IMAGE */}
+
                 <Box
                     component="img"
                     src={image_path || "/default/default-product.png"}
@@ -254,6 +284,7 @@ export default function ProductCard({ product }) {
                 />
 
                 {/* PRODUCT INFO */}
+
                 <Box sx={{ p: 1.5 }}>
 
                     <Typography fontSize={14} fontWeight={600} noWrap>
@@ -270,6 +301,61 @@ export default function ProductCard({ product }) {
 
                 </Box>
 
+                {/* CART CONTROLS */}
+
+                <Box
+                    sx={{
+                        position: "absolute",
+                        bottom: 10,
+                        right: 10,
+                        zIndex: 2
+                    }}
+                >
+
+                    {cartQty === 0 ? (
+
+                        <IconButton
+                            onClick={handleAddToCart}
+                            sx={{
+                                backgroundColor: "#fff",
+                                boxShadow: 2
+                            }}
+                        >
+                            <ShoppingCartIcon fontSize="small" />
+                        </IconButton>
+
+                    ) : (
+
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={1}
+                            sx={{
+                                background: "#fff",
+                                borderRadius: 2,
+                                px: 1,
+                                boxShadow: 2
+                            }}
+                        >
+
+                            <IconButton size="small" onClick={decreaseQty}>
+                                <RemoveIcon fontSize="small" />
+                            </IconButton>
+
+                            <Typography fontSize={14} fontWeight={600}>
+                                {cartQty}
+                            </Typography>
+
+                            <IconButton size="small" onClick={increaseQty}>
+                                <AddIcon fontSize="small" />
+                            </IconButton>
+
+                        </Stack>
+
+                    )}
+
+                </Box>
+
             </Card>
 
             {/* AUTH DIALOG */}
@@ -278,7 +364,6 @@ export default function ProductCard({ product }) {
                 open={authOpen}
                 onClose={() => setAuthOpen(false)}
             />
-
         </>
     );
 }

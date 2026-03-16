@@ -163,7 +163,7 @@ export default function AuthDialog({ open, onClose }) {
 
                 localStorage.setItem(
                     "cart_products",
-                    JSON.stringify(cartRes.data.data || [])
+                    JSON.stringify(cartRes.data || { cart_products: [] })
                 );
 
             } catch {

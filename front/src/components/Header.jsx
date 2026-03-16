@@ -25,7 +25,6 @@ import { useAuth } from "../context/AuthContext";
 export default function Header({ onMenuClick }) {
 
     const navigate = useNavigate();
-
     const { auth, logout } = useAuth();
 
     const user = auth.user;
@@ -34,25 +33,87 @@ export default function Header({ onMenuClick }) {
     const [anchorEl, setAnchorEl] = useState(null);
     const [cartCount, setCartCount] = useState(0);
 
+    /* ---------------------- */
     /* LOAD CART COUNT */
+    /* ---------------------- */
 
-    useEffect(() => {
+    const loadCartCount = () => {
 
-        const cart = JSON.parse(localStorage.getItem("cart_products") || "[]");
+        try {
 
-        if (Array.isArray(cart)) {
+            const storage = JSON.parse(
+                localStorage.getItem("cart_products") ||
+                '{"cart_products":[]}'
+            );
 
-            const total = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
+            const cartProducts = storage.cart_products || [];
+
+            const total = cartProducts.reduce(
+                (sum, item) => sum + (item.quantity || 0),
+                0
+            );
 
             setCartCount(total);
 
-        } else {
+        } catch (err) {
 
+            console.error("Cart read error", err);
             setCartCount(0);
 
         }
+    };
+
+    /* ---------------------- */
+    /* INITIAL LOAD */
+    /* ---------------------- */
+
+    useEffect(() => {
+
+        loadCartCount();
 
     }, [user]);
+
+    /* ---------------------- */
+    /* LISTEN STORAGE CHANGES */
+    /* ---------------------- */
+
+    useEffect(() => {
+
+        const handleStorageChange = () => {
+
+            loadCartCount();
+
+        };
+
+        window.addEventListener("storage", handleStorageChange);
+
+        return () => {
+
+            window.removeEventListener("storage", handleStorageChange);
+
+        };
+
+    }, []);
+
+    /* ---------------------- */
+    /* POLLING FOR SAME TAB UPDATES */
+    /* ---------------------- */
+
+    useEffect(() => {
+
+        const interval = setInterval(() => {
+
+            loadCartCount();
+
+        }, 1000);
+
+        return () => clearInterval(interval);
+
+    }, []);
+
+    /* ---------------------- */
+    /* LOGOUT */
+    /* ---------------------- */
 
     const handleLogout = () => {
 
@@ -69,6 +130,7 @@ export default function Header({ onMenuClick }) {
         setAnchorEl(null);
 
         navigate("/", { replace: true });
+
     };
 
     return (
@@ -85,6 +147,7 @@ export default function Header({ onMenuClick }) {
                     {/* LEFT */}
 
                     <Box display="flex" alignItems="center" gap={1}>
+
                         <IconButton
                             onClick={onMenuClick}
                             sx={{ color: "#fff" }}
@@ -95,6 +158,7 @@ export default function Header({ onMenuClick }) {
                         <Typography fontWeight={800} color="#fff">
                             AmCart | Fashion Mart
                         </Typography>
+
                     </Box>
 
                     {/* RIGHT */}
@@ -115,7 +179,7 @@ export default function Header({ onMenuClick }) {
                             <SearchIcon />
                         </IconButton>
 
-                        {/* CART ICON (ONLY WHEN LOGGED IN) */}
+                        {/* CART ICON */}
 
                         {user && (
                             <IconButton
@@ -125,6 +189,7 @@ export default function Header({ onMenuClick }) {
                                 <Badge
                                     badgeContent={cartCount}
                                     color="error"
+                                    overlap="circular"
                                 >
                                     <ShoppingCartIcon />
                                 </Badge>
@@ -190,12 +255,12 @@ export default function Header({ onMenuClick }) {
                                 </Menu>
 
                             </>
-
                         )}
 
                     </Box>
 
                 </Toolbar>
+
             </AppBar>
 
             <AuthDialog
