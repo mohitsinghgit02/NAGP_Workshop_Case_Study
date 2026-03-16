@@ -19,3 +19,4 @@ class AddUserRequest(BaseModel):
     last_name: Optional[str] = None
     pin_code: Optional[str] = None
     city: Optional[str] = None
+    country: Optional[str] = None

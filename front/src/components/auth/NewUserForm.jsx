@@ -8,6 +8,8 @@ export default function NewUserForm({ email, onSuccess }) {
         first_name: "",
         last_name: "",
         email: email || "",
+        phone: "",
+        country: "",
         pin_code: "",
         city: "",
     });
@@ -24,13 +26,12 @@ export default function NewUserForm({ email, onSuccess }) {
 
     const submit = async () => {
 
-        if (!form.first_name || !form.last_name || !form.email) {
+        if (!form.first_name || !form.last_name || !form.email || !form.phone) {
             setError("Please fill all required fields");
             return;
         }
 
         try {
-
             setLoading(true);
             setError("");
 
@@ -39,7 +40,7 @@ export default function NewUserForm({ email, onSuccess }) {
                 ...form,
             });
 
-            onSuccess(); // fetch customer & login
+            onSuccess();
 
         } catch (err) {
             setError("Failed to create user. Please try again.");
@@ -83,7 +84,23 @@ export default function NewUserForm({ email, onSuccess }) {
                     name="email"
                     type="email"
                     value={form.email}
-                    disabled   // verified email
+                    disabled
+                />
+
+                <TextField
+                    label="Phone"
+                    name="phone"
+                    type="tel"
+                    value={form.phone}
+                    onChange={handleChange}
+                    required
+                />
+
+                <TextField
+                    label="Country"
+                    name="country"
+                    value={form.country}
+                    onChange={handleChange}
                 />
 
                 <TextField

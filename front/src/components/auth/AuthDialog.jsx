@@ -107,19 +107,34 @@ export default function AuthDialog({ open, onClose }) {
         try {
 
             const res = await fetchCustomer();
-
             const data = res.data.data;
 
             const name = `${data.customer?.first_name || ""} ${data.customer?.last_name || ""}`.trim();
 
+            const userPayload = {
+                user_id: data.user.user_id,
+                name: name,
+                email: data.user.email,
+                phone: data.user.phone,
+                roles: data.roles,
+                customer_id: data.customer?.customer_id,
+                first_name: data.customer?.first_name,
+                last_name: data.customer?.last_name,
+                city: data.address?.city,
+                country: data.address?.country,
+                postal_code: data.address?.postal_code,
+                address: data.address
+            };
+
+            /* store full user in local storage */
+
+            localStorage.setItem(
+                "user_profile",
+                JSON.stringify(userPayload)
+            );
+
             login(
-                {
-                    name: name,
-                    email: data.user.email,
-                    roles: data.roles,
-                    customer_id: data.customer?.customer_id,
-                    address: data.address
-                },
+                userPayload,
                 {
                     access_token: localStorage.getItem("access_token"),
                     id_token: localStorage.getItem("id_token"),

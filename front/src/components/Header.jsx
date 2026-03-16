@@ -28,6 +28,7 @@ export default function Header({ onMenuClick }) {
     const handleLogout = () => {
         logout();
         setAnchorEl(null);
+        navigate("/", { replace: true });
     };
 
     return (
@@ -88,7 +89,12 @@ export default function Header({ onMenuClick }) {
                                     open={Boolean(anchorEl)}
                                     onClose={() => setAnchorEl(null)}
                                 >
-                                    <MenuItem onClick={() => setAnchorEl(null)}>
+                                    <MenuItem
+                                        onClick={() => {
+                                            navigate("/profile");
+                                            setAnchorEl(null);
+                                        }}
+                                    >
                                         Profile
                                     </MenuItem>
                                     <MenuItem onClick={handleLogout}>
