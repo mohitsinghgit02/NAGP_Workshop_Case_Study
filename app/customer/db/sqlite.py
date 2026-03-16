@@ -42,6 +42,21 @@ def get_db_connection():
             postal_code TEXT,
             FOREIGN KEY(customer_id) REFERENCES CUSTOMER_DB_CUSTOMER(customer_id)
         );
+        CREATE TABLE IF NOT EXISTS CUSTOMER_DB_LIKED_PRODUCT (
+            liked_id TEXT PRIMARY KEY,
+            user_id TEXT,
+            product_id TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, product_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS CUSTOMER_DB_CART_PRODUCT (
+            cart_id TEXT PRIMARY KEY,
+            user_id TEXT,
+            product_id TEXT,
+            quantity INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
         """
     )
 

@@ -16,3 +16,9 @@ export const addUser = (payload) =>
 
 export const fetchCustomer = () =>
     apiClient.get("/customer/fetch");
+
+export const fetchLikedProducts = () =>
+    apiClient.get("/customer/liked-products");
+
+export const fetchCartProducts = () =>
+    apiClient.get("/customer/cart");

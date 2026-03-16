@@ -16,6 +16,8 @@ import {
     sendOtp,
     verifyOtp,
     fetchCustomer,
+    fetchLikedProducts,
+    fetchCartProducts
 } from "../../api/authApi";
 
 export default function AuthDialog({ open, onClose }) {
@@ -28,13 +30,9 @@ export default function AuthDialog({ open, onClose }) {
 
     const { login } = useAuth();
 
-    /* EMAIL VALIDATION */
-
     const validateEmail = (email) => {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     };
-
-    /* SEND OTP */
 
     const handleSendOtp = async () => {
 
@@ -44,6 +42,7 @@ export default function AuthDialog({ open, onClose }) {
         }
 
         try {
+
             setLoading(true);
             setError("");
 
@@ -53,13 +52,15 @@ export default function AuthDialog({ open, onClose }) {
             setStep("OTP");
 
         } catch {
+
             setError("Failed to send OTP. Try again.");
+
         } finally {
+
             setLoading(false);
+
         }
     };
-
-    /* VERIFY OTP */
 
     const handleVerifyOtp = async (otp) => {
 
@@ -69,8 +70,6 @@ export default function AuthDialog({ open, onClose }) {
             setError("");
 
             const res = await verifyOtp(email, otp);
-
-            /* Save tokens */
 
             localStorage.setItem(
                 "access_token",
@@ -94,13 +93,15 @@ export default function AuthDialog({ open, onClose }) {
             }
 
         } catch {
+
             setError("Invalid OTP. Please try again.");
+
         } finally {
+
             setLoading(false);
+
         }
     };
-
-    /* FETCH CUSTOMER */
 
     const loadCustomerAndLogin = async () => {
 
@@ -126,8 +127,6 @@ export default function AuthDialog({ open, onClose }) {
                 address: data.address
             };
 
-            /* store full user in local storage */
-
             localStorage.setItem(
                 "user_profile",
                 JSON.stringify(userPayload)
@@ -141,10 +140,43 @@ export default function AuthDialog({ open, onClose }) {
                 }
             );
 
+            /* FETCH LIKED PRODUCTS */
+
+            try {
+
+                const likedRes = await fetchLikedProducts();
+
+                localStorage.setItem(
+                    "liked_products",
+                    JSON.stringify(likedRes.data.data || { liked_products: [] })
+                );
+
+            } catch {
+                console.warn("Liked products fetch failed");
+            }
+
+            /* FETCH CART PRODUCTS */
+
+            try {
+
+                const cartRes = await fetchCartProducts();
+
+                localStorage.setItem(
+                    "cart_products",
+                    JSON.stringify(cartRes.data.data || [])
+                );
+
+            } catch {
+                console.warn("Cart products fetch failed");
+            }
+
             onClose();
 
+
         } catch {
+
             setError("Unable to fetch user details");
+
         }
     };
 
@@ -157,8 +189,6 @@ export default function AuthDialog({ open, onClose }) {
                         {error}
                     </Alert>
                 )}
-
-                {/* EMAIL STEP */}
 
                 {step === "EMAIL" && (
                     <>
@@ -187,8 +217,6 @@ export default function AuthDialog({ open, onClose }) {
                     </>
                 )}
 
-                {/* OTP STEP */}
-
                 {step === "OTP" && (
                     <OtpInput
                         onSubmit={handleVerifyOtp}
@@ -196,8 +224,6 @@ export default function AuthDialog({ open, onClose }) {
                         email={email}
                     />
                 )}
-
-                {/* NEW USER FORM */}
 
                 {step === "NEW_USER" && (
                     <NewUserForm

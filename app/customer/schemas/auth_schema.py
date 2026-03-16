@@ -8,3 +8,7 @@ class SendOTPRequest(BaseModel):
 class VerifyOTPRequest(BaseModel):
     identifier: str
     otp: str
+
+
+class CartUpdateRequest(BaseModel):
+    quantity: int

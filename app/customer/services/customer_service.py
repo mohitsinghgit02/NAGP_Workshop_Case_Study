@@ -4,6 +4,9 @@ from sqlalchemy.orm import Session
 import uuid
 from models.customer_model import Customer
 from models.address_model import Address
+from models.liked_product import LikedProduct
+from models.cart_product import CartProduct
+from uuid import uuid4
 import grpc
 from grpc_client import (
     user_profile_pb2,
@@ -142,3 +145,87 @@ class CustomerService:
             print(f"Error creating customer: {e}")
             db.rollback()
             raise e
+
+    def get_liked_products(self, db: Session, user_id: str):
+        products = db.query(LikedProduct).filter(LikedProduct.user_id == user_id).all()
+
+        return {"liked_products": [{"product_id": p.product_id} for p in products]}
+
+    def toggle_liked_product(self, db: Session, user_id: str, product_id: str):
+
+        existing = (
+            db.query(LikedProduct)
+            .filter(
+                LikedProduct.user_id == user_id,
+                LikedProduct.product_id == product_id,
+            )
+            .first()
+        )
+        # UNLIKE
+        if existing:
+            db.delete(existing)
+            db.commit()
+            return {"liked": False, "message": "Product removed from liked list"}
+
+        # LIKE
+        liked = LikedProduct(
+            liked_id=str(uuid4()),
+            user_id=user_id,
+            product_id=product_id,
+        )
+
+        db.add(liked)
+        db.commit()
+        return {"liked": True, "message": "Product added to liked list"}
+
+    def get_cart_products(self, db: Session, user_id: str):
+        cart_items = db.query(CartProduct).filter(CartProduct.user_id == user_id).all()
+
+        return {
+            "cart_products": [
+                {"product_id": c.product_id, "quantity": c.quantity} for c in cart_items
+            ]
+        }
+
+    def update_cart_product(
+        self, db: Session, product_id: str, quantity: int, user_id: str
+    ):
+        cart_item = (
+            db.query(CartProduct)
+            .filter(
+                CartProduct.user_id == user_id,
+                CartProduct.product_id == product_id,
+            )
+            .first()
+        )
+
+        # REMOVE PRODUCT
+        if quantity == 0:
+
+            if cart_item:
+                db.delete(cart_item)
+                db.commit()
+
+            return {"product_id": product_id, "quantity": 0, "status": "removed"}
+
+        # UPDATE EXISTING PRODUCT
+        if cart_item:
+
+            cart_item.quantity = quantity
+            db.commit()
+
+            return {"product_id": product_id, "quantity": quantity, "status": "updated"}
+
+        # ADD NEW PRODUCT
+
+        cart_item = CartProduct(
+            cart_id=str(uuid4()),
+            user_id=user_id,
+            product_id=product_id,
+            quantity=quantity,
+        )
+
+        db.add(cart_item)
+        db.commit()
+
+        return {"product_id": product_id, "quantity": quantity, "status": "added"}
