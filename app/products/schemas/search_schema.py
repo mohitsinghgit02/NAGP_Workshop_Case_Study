@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 
@@ -14,3 +14,7 @@ class SearchRequest(BaseModel):
 
     page: int = Field(1, ge=1)
     page_size: int = Field(20, ge=1, le=50)
+
+
+class ProductIdsRequest(BaseModel):
+    product_ids: List[int]

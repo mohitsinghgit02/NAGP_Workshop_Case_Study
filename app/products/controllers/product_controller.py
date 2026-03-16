@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from services.search_service import ProductSearchService
 from common.router_decorator import make_router
 from common.http_decorators import post, get
-from schemas.search_schema import SearchRequest
+from schemas.search_schema import SearchRequest, ProductIdsRequest
 from common.json_sanitizer import sanitize_for_json
 
 router = APIRouter(prefix="/product", tags=["Product"])
@@ -68,3 +68,18 @@ class ProductController:
         data = self.search_service.get_category_tree()
 
         return {"status": "success", "data": data}
+
+    @post("/by-ids", summary="Fetch products by product IDs")
+    def fetch_products_by_ids(self, request: ProductIdsRequest):
+
+        if not request.product_ids:
+            return {"total": 0, "results": []}
+
+        products = self.search_service.get_products_by_ids(
+            product_ids=request.product_ids
+        )
+
+        if not products:
+            return {"total": 0, "results": []}
+
+        return sanitize_for_json({"total": len(products), "results": products})

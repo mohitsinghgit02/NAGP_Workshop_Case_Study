@@ -23,17 +23,22 @@ import PhoneIcon from "@mui/icons-material/Phone";
 import LocationCityIcon from "@mui/icons-material/LocationCity";
 import PublicIcon from "@mui/icons-material/Public";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
+import FavoriteIcon from "@mui/icons-material/Favorite";
 
-import { searchProducts } from "../api/productApi";
+import { searchProducts, getProductsByIds } from "../api/productApi";
 
 export default function ProfilePage() {
 
     const [drawerOpen, setDrawerOpen] = useState(false);
 
     const [user, setUser] = useState(null);
+
+    const [likedProducts, setLikedProducts] = useState([]);
     const [recommendedProducts, setRecommendedProducts] = useState([]);
 
     const [loading, setLoading] = useState(false);
+
+    const [hasLikedProducts, setHasLikedProducts] = useState(false);
 
     /* LOAD USER */
 
@@ -45,11 +50,70 @@ export default function ProfilePage() {
             setUser(JSON.parse(storedUser));
         }
 
-        loadRecommendedProducts();
+        loadProducts();
 
     }, []);
 
     /* LOAD PRODUCTS */
+
+    const loadProducts = async () => {
+
+        const likedStorage = JSON.parse(
+            localStorage.getItem("liked_products") ||
+            '{"liked_products":[]}'
+        );
+
+        const likedItems = likedStorage.liked_products || [];
+
+        if (likedItems.length > 0) {
+
+            setHasLikedProducts(true);
+
+            const ids = likedItems.map(i => Number(i.product_id));
+
+            await loadLikedProducts(ids);
+
+        } else {
+
+            setHasLikedProducts(false);
+
+            await loadRecommendedProducts();
+
+        }
+
+    };
+
+    /* LOAD LIKED PRODUCTS */
+
+    const loadLikedProducts = async (ids) => {
+
+        setLoading(true);
+
+        try {
+
+            const data = await getProductsByIds({
+                product_ids: ids
+            });
+
+            const results = Array.isArray(data?.results)
+                ? data.results
+                : [];
+
+            setLikedProducts(results);
+
+        } catch (err) {
+
+            console.error(err);
+
+        } finally {
+
+            setLoading(false);
+
+        }
+
+    };
+
+    /* LOAD RECOMMENDED PRODUCTS */
 
     const loadRecommendedProducts = async () => {
 
@@ -74,9 +138,13 @@ export default function ProfilePage() {
             setRecommendedProducts(results);
 
         } catch (err) {
+
             console.error(err);
+
         } finally {
+
             setLoading(false);
+
         }
 
     };
@@ -214,7 +282,7 @@ export default function ProfilePage() {
 
                 </Paper>
 
-                {/* RECOMMENDED PRODUCTS */}
+                {/* PRODUCTS SECTION */}
 
                 <Box sx={{ mt: 4 }}>
 
@@ -224,14 +292,24 @@ export default function ProfilePage() {
                         spacing={1}
                         sx={{ mb: 2 }}
                     >
-                        <LocalOfferIcon color="primary" />
+
+                        {hasLikedProducts ? (
+                            <FavoriteIcon color="error" />
+                        ) : (
+                            <LocalOfferIcon color="primary" />
+                        )}
 
                         <Typography
                             variant="h5"
                             fontWeight={700}
                         >
-                            Recommended For You
+
+                            {hasLikedProducts
+                                ? "Your Liked Products"
+                                : "Recommended For You"}
+
                         </Typography>
+
                     </Stack>
 
                     <Divider sx={{ mb: 4 }} />
@@ -246,7 +324,10 @@ export default function ProfilePage() {
 
                         <Grid container spacing={3}>
 
-                            {recommendedProducts.map((p) => (
+                            {(hasLikedProducts
+                                ? likedProducts
+                                : recommendedProducts
+                            ).map((p) => (
 
                                 <Grid
                                     item

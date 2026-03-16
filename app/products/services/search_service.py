@@ -131,3 +131,21 @@ class ProductSearchService:
         }
 
         return formatted_tree
+
+    def get_products_by_ids(self, product_ids: list):
+        if not self.products or not product_ids:
+            return []
+
+        product_ids = set(str(pid) for pid in product_ids)
+
+        seen = set()
+        matched_products = []
+
+        for product in self.products:
+            pid = str(product.get("id"))
+
+            if pid in product_ids and pid not in seen:
+                matched_products.append(product)
+                seen.add(pid)
+
+        return matched_products

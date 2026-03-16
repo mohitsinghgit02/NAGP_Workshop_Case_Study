@@ -29,3 +29,9 @@ export const updateCartProduct = async (productId, quantity) => {
     );
     return res.data;
 };
+
+
+export const getProductsByIds = async (payload) => {
+    const res = await apiClient.post("/product/by-ids", payload);
+    return res.data; // ✅ unwrap axios response
+};
