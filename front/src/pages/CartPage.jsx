@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
     Box,
@@ -33,6 +34,8 @@ import { getProductsByIds, updateCartProduct } from "../api/productApi";
 
 export default function CartPage() {
 
+    const navigate = useNavigate();
+
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [cartProducts, setCartProducts] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -43,6 +46,12 @@ export default function CartPage() {
     useEffect(() => {
         loadCartProducts();
     }, []);
+
+    /* NAVIGATE TO PRODUCT */
+
+    const openProduct = (product) => {
+        navigate(`/product/${product.id}`, { state: product });
+    };
 
     /* LOAD CART */
 
@@ -82,14 +91,13 @@ export default function CartPage() {
                 ? data.results
                 : [];
 
-            /* Normalize API response */
-
             const mergedProducts = results.map(p => ({
                 id: p.id,
                 name: p.productDisplayName,
                 image: p.image_path,
                 price: Number(p.price),
-                quantity: quantityMap[p.id] || 1
+                quantity: quantityMap[p.id] || 1,
+                raw: p
             }));
 
             setCartProducts(mergedProducts);
@@ -237,8 +245,6 @@ export default function CartPage() {
 
                     <>
 
-                        {/* CART TABLE */}
-
                         <TableContainer component={Paper} elevation={0}>
 
                             <Table>
@@ -263,11 +269,15 @@ export default function CartPage() {
 
                                             <TableRow key={p.id} hover>
 
-                                                {/* PRODUCT INFO */}
-
                                                 <TableCell sx={{ width: "50%" }}>
 
-                                                    <Stack direction="row" spacing={2} alignItems="center">
+                                                    <Stack
+                                                        direction="row"
+                                                        spacing={2}
+                                                        alignItems="center"
+                                                        sx={{ cursor: "pointer" }}
+                                                        onClick={() => openProduct(p.raw)}
+                                                    >
 
                                                         <Avatar
                                                             src={p.image}
@@ -291,8 +301,6 @@ export default function CartPage() {
                                                 <TableCell align="center">
                                                     ₹{p.price}
                                                 </TableCell>
-
-                                                {/* QUANTITY CONTROLS */}
 
                                                 <TableCell align="center">
 
@@ -329,8 +337,6 @@ export default function CartPage() {
                                                     ₹{total.toFixed(2)}
                                                 </TableCell>
 
-                                                {/* REMOVE */}
-
                                                 <TableCell align="center">
 
                                                     <IconButton
@@ -353,8 +359,6 @@ export default function CartPage() {
                             </Table>
 
                         </TableContainer>
-
-                        {/* ORDER SUMMARY */}
 
                         <Box
                             sx={{
