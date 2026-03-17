@@ -3,8 +3,8 @@ name: Build & Deploy
 on:
   push:
     branches:
-      # - "**"
-      - release/*
+      - "**"
+      # - release/*
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}

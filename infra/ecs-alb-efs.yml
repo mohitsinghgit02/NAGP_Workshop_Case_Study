@@ -160,6 +160,11 @@ Resources:
               Value: localhost
             - Name: CUSTOMER_GRPC_PORT
               Value: "50052"
+            - Name: SMTP_SERVER
+              Value: "pro.turbo-smtp.com"
+            - Name: SMTP_PORT
+              Value: "587"
+
 
           Secrets:
             - Name: AUTH_DB_PATH
@@ -176,6 +181,10 @@ Resources:
               ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_CLIENT_ID
             - Name: COGNITO_SYSTEM_PASSWORD
               ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/system/COGNITO_SYSTEM_PASSWORD
+            - Name: SMTP_USER
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/auth/SMTP_USER
+            - Name: SMTP_PASS
+              ValueFrom: arn:aws:ssm:ap-south-1:483620274852:parameter/amcart/auth/SMTP_PASS
 
           MountPoints:
             - SourceVolume: efs-volume
