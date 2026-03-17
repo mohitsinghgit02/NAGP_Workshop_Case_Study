@@ -1,19 +1,21 @@
 import random
 import uuid
 import os
+from fastapi import BackgroundTasks
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from models.otp import OTP
 from models.user import User
 from models.user_role import UserRole
+from common.email_service import send_otp_email
 from services.cognito_service import CognitoService
 
 
 class OTPService:
     OTP_EXPIRY_MINUTES = 5
 
-    def send_otp(self, db: Session, identifier: str):
+    def send_otp(self, db: Session, identifier: str, background_tasks: BackgroundTasks):
         otp = str(random.randint(100000, 999999))
         expiry = datetime.utcnow() + timedelta(minutes=self.OTP_EXPIRY_MINUTES)
 
@@ -21,6 +23,8 @@ class OTPService:
 
         db.add(otp_entry)
         print(f"[LOCAL OTP] {identifier}: {otp}")
+        # send email in background
+        background_tasks.add_task(send_otp_email, identifier, otp)
         db.commit()
         return otp
 

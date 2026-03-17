@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from schemas.auth_schema import SendOTPRequest, VerifyOTPRequest
 from services.otp_service import OTPService
 from services.cognito_service import CognitoService
@@ -16,11 +16,16 @@ class AuthController:
         self.otp_service = OTPService()
 
     @post("/send-otp")
-    def send_otp(self, request: SendOTPRequest, db: Session = Depends(get_db)):
-        otp = self.otp_service.send_otp(db, request.identifier)
+    def send_otp(
+        self,
+        request: SendOTPRequest,
+        background_tasks: BackgroundTasks,
+        db: Session = Depends(get_db),
+    ):
+        otp = self.otp_service.send_otp(db, request.identifier, background_tasks)
         return {
             "success": True,
-            "message": f"OTP sent successfully with updated code {otp}",
+            "message": f"OTP sent successfully with updated code",
         }
 
     @post("/verify-otp")
