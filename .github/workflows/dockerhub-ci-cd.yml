@@ -4,17 +4,82 @@ on:
   push:
     branches:
       - "**"
-      # - release/*
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-# ---------------- BUILD ----------------
-  
+
+# ===============================
+# Detect Changed Components
+# ===============================
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      auth: ${{ steps.filter.outputs.auth }}
+      customer: ${{ steps.filter.outputs.customer }}
+      product: ${{ steps.filter.outputs.product }}
+      nginx: ${{ steps.filter.outputs.nginx }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infra: ${{ steps.filter.outputs.infra }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            auth:
+              - 'app/auth/**'
+            customer:
+              - 'app/customer/**'
+            product:
+              - 'app/products/**'
+            nginx:
+              - 'app/nginx/**'
+            frontend:
+              - 'front/**'
+            infra:
+              - 'infra/**'
+
+
+# ===============================
+# Check If First Deployment
+# ===============================
+  check-infra:
+    runs-on: ubuntu-latest
+    needs: changes
+
+    outputs:
+      first_deploy: ${{ steps.check.outputs.first }}
+
+    steps:
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Check CloudFormation Stack
+        id: check
+        run: |
+
+          if aws cloudformation describe-stacks --stack-name amcart-stack > /dev/null 2>&1; then
+            echo "first=false" >> $GITHUB_OUTPUT
+          else
+            echo "first=true" >> $GITHUB_OUTPUT
+          fi
+
+
+# ===============================
+# Build Images
+# ===============================
   build:
+    needs: [changes, check-infra]
     runs-on: ubuntu-latest
 
     outputs:
@@ -23,7 +88,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Generate unique image tag
       - name: Generate image tag
         id: vars
         run: |
@@ -32,53 +96,84 @@ jobs:
           TAG="${BRANCH}-${TS}"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      # Configure AWS credentials for ECR
-      - name: Configure AWS credentials
+      - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Login to Amazon ECR
-      - name: Login to Amazon ECR
+      - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Build & push Auth image
-      - name: Build & Push Auth image
+
+# -------- AUTH --------
+
+      - name: Build Auth
+        if: |
+          needs.check-infra.outputs.first_deploy == 'true' ||
+          needs.changes.outputs.auth == 'true'
         run: |
           docker build -t amcart-auth:${{ steps.vars.outputs.tag }} ./app/auth
-          docker tag amcart-auth:${{ steps.vars.outputs.tag }} ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-auth:${{ steps.vars.outputs.tag }}
-          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-auth:${{ steps.vars.outputs.tag }}
+          docker tag amcart-auth:${{ steps.vars.outputs.tag }} $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/amcart-auth:${{ steps.vars.outputs.tag }}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/amcart-auth:${{ steps.vars.outputs.tag }}
 
-      # Build & push Customer image
-      - name: Build & Push Customer image
+# -------- CUSTOMER --------
+
+      - name: Build Customer
+        if: |
+          needs.check-infra.outputs.first_deploy == 'true' ||
+          needs.changes.outputs.customer == 'true'
         run: |
           docker build -f ./app/customer/Dockerfile.api -t amcart-customer:${{ steps.vars.outputs.tag }} ./app/customer
-          docker tag amcart-customer:${{ steps.vars.outputs.tag }} ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-customer:${{ steps.vars.outputs.tag }}
-          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-customer:${{ steps.vars.outputs.tag }}
+          docker tag amcart-customer:${{ steps.vars.outputs.tag }} $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/amcart-customer:${{ steps.vars.outputs.tag }}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/amcart-customer:${{ steps.vars.outputs.tag }}
 
-      # Build & push Product image
-      - name: Build & Push Product image
+# -------- PRODUCT --------
+
+      - name: Build Product
+        if: |
+          needs.check-infra.outputs.first_deploy == 'true' ||
+          needs.changes.outputs.product == 'true'
         run: |
           docker build -f ./app/products/Dockerfile.api -t amcart-product:${{ steps.vars.outputs.tag }} ./app/products
-          docker tag amcart-product:${{ steps.vars.outputs.tag }} ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-product:${{ steps.vars.outputs.tag }}
-          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-product:${{ steps.vars.outputs.tag }}
+          docker tag amcart-product:${{ steps.vars.outputs.tag }} $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/amcart-product:${{ steps.vars.outputs.tag }}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/amcart-product:${{ steps.vars.outputs.tag }}
 
-      # Build & push Nginx image
-      - name: Build & Push Nginx image
+# -------- NGINX --------
+
+      - name: Build Nginx
+        if: |
+          needs.check-infra.outputs.first_deploy == 'true' ||
+          needs.changes.outputs.nginx == 'true'
         run: |
           docker build -t amcart-nginx:${{ steps.vars.outputs.tag }} ./app/nginx
-          docker tag amcart-nginx:${{ steps.vars.outputs.tag }} ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-nginx:${{ steps.vars.outputs.tag }}
-          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/amcart-nginx:${{ steps.vars.outputs.tag }}
+          docker tag amcart-nginx:${{ steps.vars.outputs.tag }} $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/amcart-nginx:${{ steps.vars.outputs.tag }}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/amcart-nginx:${{ steps.vars.outputs.tag }}
 
-# ---------------- DEPLOY ----------------
-  deploy:
-    needs: build
+
+
+# ===============================
+# Deploy Backend
+# ===============================
+  deploy-backend:
+
+    needs: [build, changes, check-infra]
     runs-on: ubuntu-latest
-    if: always()  # or restrict to main/release branches if you want
+
+    if: |
+      needs.check-infra.outputs.first_deploy == 'true' ||
+      needs.changes.outputs.auth == 'true' ||
+      needs.changes.outputs.customer == 'true' ||
+      needs.changes.outputs.product == 'true' ||
+      needs.changes.outputs.nginx == 'true' ||
+      needs.changes.outputs.infra == 'true'
+
+    outputs:
+      alb_dns: ${{ steps.alb.outputs.alb_dns }}
 
     steps:
+
       - uses: actions/checkout@v5
 
       - name: Configure AWS
@@ -88,7 +183,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy ECS via CloudFormation
+      - name: Deploy ECS
         run: |
           aws cloudformation deploy \
             --stack-name amcart-stack \
@@ -100,8 +195,8 @@ jobs:
               ImageTag=${{ needs.build.outputs.image_tag }} \
               AWSAccountId=${{ env.AWS_ACCOUNT_ID }} \
               AWSRegion=${{ env.AWS_REGION }}
-              
-      - name: Get ALB DNS from CloudFormation
+
+      - name: Get ALB DNS
         id: alb
         run: |
           ALB_DNS=$(aws cloudformation describe-stacks \
@@ -109,21 +204,47 @@ jobs:
             --query "Stacks[0].Outputs[?OutputKey=='LoadBalancerDNS'].OutputValue" \
             --output text)
 
-          echo "ALB_DNS=$ALB_DNS"
           echo "alb_dns=$ALB_DNS" >> $GITHUB_OUTPUT
-      
-      - name: Deploy Frontend Infra (S3 + CloudFront)
+
+
+
+# ===============================
+# Deploy Frontend
+# ===============================
+  deploy-frontend:
+
+    needs: [deploy-backend, changes, check-infra]
+    runs-on: ubuntu-latest
+
+    if: |
+      needs.check-infra.outputs.first_deploy == 'true' ||
+      needs.changes.outputs.frontend == 'true'
+
+    steps:
+
+      - uses: actions/checkout@v5
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy Frontend Infra
         run: |
           aws cloudformation deploy \
             --stack-name amcart-frontend \
             --template-file infra/frontend-s3-cloudfront.yml \
             --capabilities CAPABILITY_NAMED_IAM \
-            --parameter-overrides ProjectName=amcart \
-              ALBDomainName=${{ steps.alb.outputs.alb_dns }}
+            --parameter-overrides \
+              ProjectName=amcart \
+              ALBDomainName=${{ needs.deploy-backend.outputs.alb_dns }}
 
-      - name: Get Frontend Infra Outputs
+      - name: Get Outputs
         id: frontend
         run: |
+
           BUCKET=$(aws cloudformation describe-stacks \
             --stack-name amcart-frontend \
             --query "Stacks[0].Outputs[?OutputKey=='BucketName'].OutputValue" \
@@ -137,6 +258,7 @@ jobs:
           echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
           echo "dist_id=$DIST_ID" >> $GITHUB_OUTPUT
 
+
       - name: Build frontend
         working-directory: front
         env:
@@ -145,9 +267,11 @@ jobs:
           npm ci
           npm run build
 
-      - name: Upload frontend to S3
+
+      - name: Upload to S3
         run: |
           aws s3 sync front/dist s3://${{ steps.frontend.outputs.bucket }} --delete
+
 
       - name: Invalidate CloudFront
         run: |
