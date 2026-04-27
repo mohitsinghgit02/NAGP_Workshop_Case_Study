@@ -141,7 +141,7 @@ jobs:
         working-directory: front
         env:
           VITE_API_BASE_URL: /api
-          VITE_APP_VERSION: ${{ needs.build.outputs.image_tag }}
+          VITE_APP_VERSION: ${{ github.run_id }}-${{ github.sha }}
         run: |
           npm ci
           npm run build
