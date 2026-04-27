@@ -33,6 +33,8 @@ export default function Header({ onMenuClick }) {
     const [anchorEl, setAnchorEl] = useState(null);
     const [cartCount, setCartCount] = useState(0);
 
+    const appVersion = import.meta.env.VITE_APP_VERSION || "N/A";
+
     /* ---------------------- */
     /* LOAD CART COUNT */
     /* ---------------------- */
@@ -159,6 +161,45 @@ export default function Header({ onMenuClick }) {
                             Am-Cart
                         </Typography>
 
+                    </Box>
+
+                    {/* CENTER */}
+
+                    <Box
+                        display="flex"
+                        alignItems="center"
+                        gap={1.5}
+                        sx={{
+                            position: "absolute",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                        }}
+                    >
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                color: "#94a3b8",
+                                fontSize: "0.75rem",
+                                letterSpacing: "0.05em",
+                            }}
+                        >
+                            NAGP
+                        </Typography>
+
+                        <Typography sx={{ color: "#475569", fontSize: "0.75rem" }}>
+                            |
+                        </Typography>
+
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                color: "#94a3b8",
+                                fontSize: "0.75rem",
+                                letterSpacing: "0.05em",
+                            }}
+                        >
+                            Version: {appVersion}
+                        </Typography>
                     </Box>
 
                     {/* RIGHT */}
