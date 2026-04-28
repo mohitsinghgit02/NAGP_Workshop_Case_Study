@@ -183,7 +183,7 @@ export default function Header({ onMenuClick }) {
                                 letterSpacing: "0.05em",
                             }}
                         >
-                            NAGP-CASE-STUDY
+                            NAGP: CASE-STUDY
                         </Typography>
 
                         <Typography sx={{ color: "#475569", fontSize: "0.75rem" }}>
