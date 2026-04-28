@@ -43,21 +43,21 @@ class ProductSearchService:
         min_price: Optional[int] = None,
         max_price: Optional[int] = None,
     ):
-        # # 1️⃣ Vector search (semantic)
+        # #  Vector search (semantic)
         # query_vec = self.model.encode([prompt])
         # indices = search_vectors(query_vec, self.vector_top_k)
 
         model = get_model()
 
-        # 1️⃣ Encode query
+        #  Encode query
         query_vec = model.encode([prompt])
 
-        # 2️⃣ Vector search (delegated to db layer)
+        # Vector search (delegated to db layer)
         distances, indices = search_vectors(query_vec, self.vector_top_k)
 
         matched_indices = indices[0]
 
-        # 3️⃣ Apply filters
+        #  Apply filters
         results = []
         for idx in matched_indices:
             if idx < 0 or idx >= len(self.products):
@@ -80,7 +80,7 @@ class ProductSearchService:
 
         total = len(results)
 
-        # 4️⃣ Pagination
+        # Pagination
         start = (page - 1) * page_size
         end = start + page_size
         paginated = results[start:end]
