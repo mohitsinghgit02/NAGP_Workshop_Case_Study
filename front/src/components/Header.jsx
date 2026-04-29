@@ -158,7 +158,7 @@ export default function Header({ onMenuClick }) {
                         </IconButton>
 
                         <Typography fontWeight={800} color="#fff">
-                            Am-Cart
+                            AmCart
                         </Typography>
 
                     </Box>
